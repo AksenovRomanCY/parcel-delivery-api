@@ -1,0 +1,38 @@
+
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: fastapi_app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    volumes:
+      - .:/code
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: delivery
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:
