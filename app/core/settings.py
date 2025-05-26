@@ -1,0 +1,32 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
+
+    DB_PROTOCOL: str = "mysql+aiomysql"
+    DB_USER: str = "root"
+    DB_PASSWORD: str = "root"
+    DB_HOST: str = "db"
+    DB_PORT: str = "3306"
+    DB_NAME: str = "delivery"
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+            f"{self.DB_PROTOCOL}://{self.DB_USER}:{self.DB_PASSWORD}@"
+            f"{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        )
+
+    REDIS_HOST: str = "redis"
+    REDIS_PORT: int = 6379
+
+    @property
+    def REDIS_URL(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+
+
+settings = Settings()

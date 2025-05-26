@@ -1,6 +1,3 @@
-
-version: "3.9"
-
 services:
   app:
     build: .
@@ -21,10 +18,10 @@ services:
     container_name: mysql_db
     restart: always
     environment:
-      MYSQL_DATABASE: delivery
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: {$DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-3306}:${DB_PORT:-3306}"
     volumes:
       - db_data:/var/lib/mysql
 
@@ -32,7 +29,7 @@ services:
     image: redis:7-alpine
     container_name: redis_cache
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
 
 volumes:
   db_data:
