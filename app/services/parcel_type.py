@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from sqlalchemy import select
+from sqlalchemy import func, insert, select
 
 from app.models.parcel_type import ParcelType
 from app.services.base import CRUDBase
@@ -25,23 +25,18 @@ class ParcelTypeService(CRUDBase[ParcelType]):
         res = await self.session.scalars(stmt)
         return res.all()
 
-    async def seed_defaults(self) -> None:
-        """Populate the table with three default parcel types.
+    async def total(self) -> int:
+        """Return the total number of parcel-type rows in the database.
 
-        The defaults are *clothes*, *electronics* and *misc*.
-        Seeding runs only when the table is empty to avoid duplicates.
+        Executes ``SELECT COUNT(*)`` against the model specified by the
+        service and converts the result to ``int`` so that callers never
+        receive ``None``.
 
         Returns:
-            None
+            int: Row count, or ``0`` if the table is empty.
         """
-        # Short-circuit if at least one row already exists.
-        if await self.session.scalar(select(ParcelType.id).limit(1)):
-            return
+        # Build a COUNT(*) statement on the target table.
+        stmt = select(func.count()).select_from(self.model)
 
-        defaults = ("clothes", "electronics", "misc")
-
-        # Bulk-add without committing after each insert.
-        self.session.add_all(ParcelType(name=n) for n in defaults)
-
-        # Commit once to persist all rows atomically.
-        await self.session.commit()
+        # Execute the query and coerce ``None`` to zero.
+        return int(await self.session.scalar(stmt) or 0)
