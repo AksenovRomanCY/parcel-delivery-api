@@ -1,6 +1,8 @@
-from app.main import app
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/health", tags=["health"])
 
 
-@app.get("/health", include_in_schema=False)
+@router.get("", include_in_schema=False)
 async def healthcheck():
     return {"status": "ok"}
