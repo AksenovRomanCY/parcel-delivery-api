@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import get_session_id
+from app.api.deps import get_session_id
 from app.db.deps import get_db
 from app.schemas import (
     PaginatedResponse,

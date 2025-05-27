@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from fastapi import Request, Response
 
-from app.main import app
+from app import app
 
 SESSION_HEADER = "X-Session-Id"
 
@@ -32,7 +32,3 @@ async def assign_session_id(request: Request, call_next):
     response: Response = await call_next(request)
     response.headers[SESSION_HEADER] = session_id
     return response
-
-
-def get_session_id(request: Request) -> str:
-    return request.state.session_id
