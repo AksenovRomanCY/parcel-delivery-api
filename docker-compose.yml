@@ -31,6 +31,7 @@ services:
       retries: 5
     volumes:
       - db_data:/var/lib/mysql
+      - ./docker/mysql/:/etc/mysql/conf.d/
 
   redis:
     image: redis:7-alpine
@@ -43,6 +44,16 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    env_file:
+      - .env
+    volumes:
+      - ./docker/redis/redis.conf.tpl:/etc/redis/redis.conf.tpl
+    entrypoint: >
+      /bin/sh -c "
+        apk add --no-cache gettext &&
+        envsubst < /etc/redis/redis.conf.tpl > /etc/redis/redis.conf &&
+        exec redis-server /etc/redis/redis.conf
+      "
 
 volumes:
   db_data:
