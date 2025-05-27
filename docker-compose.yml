@@ -8,8 +8,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
 
@@ -18,10 +20,15 @@ services:
     container_name: mysql_db
     restart: always
     environment:
-      MYSQL_DATABASE: {$DB_NAME}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
     ports:
       - "${DB_PORT:-3306}:${DB_PORT:-3306}"
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     volumes:
       - db_data:/var/lib/mysql
 
@@ -30,6 +37,12 @@ services:
     container_name: redis_cache
     ports:
       - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
 volumes:
   db_data:
