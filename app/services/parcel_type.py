@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, select
 
 from app.models.parcel_type import ParcelType
 from app.services.base import CRUDBase
