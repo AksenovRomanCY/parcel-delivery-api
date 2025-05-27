@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from sqlalchemy import and_, select
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import BusinessError, NotFoundError
 from app.models.parcel import Parcel
@@ -57,7 +58,12 @@ class ParcelService(CRUDBase[Parcel]):
             NotFoundError: If the parcel does not exist or belongs to a
                 different session.
         """
-        parcel = await self.get(parcel_id)
+        stmt = (
+            select(Parcel)
+            .options(selectinload(Parcel.parcel_type))
+            .where(Parcel.id == parcel_id)
+        )
+        parcel = await self.session.scalar(stmt)
 
         if parcel is None or parcel.session_id != session_id:
             raise NotFoundError("Parcel not found")
@@ -93,7 +99,12 @@ class ParcelService(CRUDBase[Parcel]):
         if filters.has_cost is False:
             conditions.append(Parcel.delivery_cost_rub.is_(None))
 
-        stmt = select(Parcel).where(and_(*conditions)).order_by(Parcel.id)
+        stmt = (
+            select(Parcel)
+            .options(selectinload(Parcel.parcel_type))
+            .where(and_(*conditions))
+            .order_by(Parcel.id)
+        )
 
         # Fast COUNT(*) via subquery to avoid re-executing the filter logic.
         total = await self.session.scalar(

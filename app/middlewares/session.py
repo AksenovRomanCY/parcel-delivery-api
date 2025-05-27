@@ -1,34 +1,42 @@
+"""Session ID middleware.
+
+Ensures that every incoming HTTP request has a session identifier
+attached, even if the client is anonymous. The session ID is stored in
+the request state and propagated back in the response headers.
+"""
+
 from uuid import uuid4
 
 from fastapi import Request, Response
 
-from app import app
-
 SESSION_HEADER = "X-Session-Id"
 
 
-@app.middleware("http")
 async def assign_session_id(request: Request, call_next):
-    """Attach a session ID to both the incoming request and outgoing response.
+    """Attach a session ID to the request and propagate it in the response.
 
-    The middleware reads the ``X-Session-Id`` header from the request.
-    If it is missing, a new UUID is generated. The identifier is stored in
-    ``request.state.session_id`` for downstream business logic.
-    Finally, the same header is added to the response so the client keeps
-    the session context.
+    The middleware checks for an existing ``X-Session-Id`` header.
+    If not present, it generates a new UUID. The ID is stored in
+    ``request.state.session_id`` for downstream business logic, and the
+    same header is included in the response for client reuse.
 
     Args:
-        request: Incoming HTTP request.
-        call_next: ASGI callable that processes the request and returns a
-            response.
+        request: Incoming HTTP request object.
+        call_next: ASGI handler for the next processing step.
 
     Returns:
-        fastapi.Response: HTTP response with the ``X-Session-Id`` header
-            set.
+        Response: HTTP response with ``X-Session-Id`` header included.
     """
-    session_id = request.headers.get(SESSION_HEADER) or str(uuid4())
-    request.state.session_id = session_id
+    # Use client-provided session ID if available; otherwise, generate one.
+    sid = request.headers.get(SESSION_HEADER) or str(uuid4())
 
+    # Store the session ID in request state so app code can access it.
+    request.state.session_id = sid
+
+    # Forward request to the next component in the ASGI pipeline.
     response: Response = await call_next(request)
-    response.headers[SESSION_HEADER] = session_id
+
+    # Reflect the session ID in the response header.
+    response.headers[SESSION_HEADER] = sid
+
     return response
