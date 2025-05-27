@@ -1,0 +1,119 @@
+from decimal import Decimal
+
+from sqlalchemy import and_, select
+
+from app.core.exceptions import BusinessError, NotFoundError
+from app.models.parcel import Parcel
+from app.schemas.parcel import ParcelCreate, ParcelFilterParams
+from app.services.base import CRUDBase
+
+
+class ParcelService(CRUDBase[Parcel]):
+    """Business-logic facade for CRUD operations on ``Parcel``."""
+
+    # Concrete SQLAlchemy model
+    model = Parcel
+
+    async def create_from_dto(self, data: ParcelCreate, session_id: str) -> Parcel:
+        """Create and persist a new parcel from a validated DTO.
+
+        Args:
+            data: Incoming API payload mapped to ``ParcelCreate``.
+            session_id: Session identifier that groups parcels belonging
+                to the same (anonymous) user.
+
+        Returns:
+            Parcel: The newly created parcel, refreshed from the database.
+
+        Raises:
+            BusinessError: If ``data.weight_kg`` is not strictly positive.
+        """
+        # Application-level check that complements any DB constraint.
+        if data.weight_kg <= 0:
+            raise BusinessError("Weight must be positive")
+
+        parcel = Parcel(
+            name=data.name,
+            weight_kg=data.weight_kg,
+            declared_value_usd=float(data.declared_value_usd),
+            parcel_type_id=data.parcel_type_id,
+            session_id=session_id,
+        )
+
+        await self._commit(parcel)
+        return parcel
+
+    async def get_owned(self, parcel_id: str, session_id: str) -> Parcel:
+        """Fetch a parcel and verify that it belongs to the caller's session.
+
+        Args:
+            parcel_id: Primary key of the parcel.
+            session_id: Caller’s session identifier.
+
+        Returns:
+            Parcel: The requested parcel instance.
+
+        Raises:
+            NotFoundError: If the parcel does not exist or belongs to a
+                different session.
+        """
+        parcel = await self.get(parcel_id)
+
+        if parcel is None or parcel.session_id != session_id:
+            raise NotFoundError("Parcel not found")
+
+        return parcel
+
+    async def list_owned(
+        self,
+        session_id: str,
+        filters: ParcelFilterParams,
+        limit: int,
+        offset: int,
+    ) -> tuple[int, list[Parcel]]:
+        """Return a page of parcels owned by the session, with optional filters.
+
+        Args:
+            session_id: Session identifier used to scope the query.
+            filters: Optional type and cost filters requested by the API.
+            limit: Maximum number of rows to return.
+            offset: Number of rows to skip (for pagination).
+
+        Returns:
+            tuple[int, list[Parcel]]: ``(total_count, rows)``, where
+            ``total_count`` is the number of matching rows and
+            ``rows`` is the current page.
+        """
+        # Dynamically compose WHERE clauses.
+        conditions = [Parcel.session_id == session_id]
+        if filters.type_id:
+            conditions.append(Parcel.parcel_type_id == filters.type_id)
+        if filters.has_cost is True:
+            conditions.append(Parcel.delivery_cost_rub.is_not(None))
+        if filters.has_cost is False:
+            conditions.append(Parcel.delivery_cost_rub.is_(None))
+
+        stmt = select(Parcel).where(and_(*conditions)).order_by(Parcel.id)
+
+        # Fast COUNT(*) via subquery to avoid re-executing the filter logic.
+        total = await self.session.scalar(
+            select(Decimal("1")).select_from(stmt.subquery())
+        )
+
+        # Apply pagination.
+        result = await self.session.scalars(stmt.limit(limit).offset(offset))
+        return int(total or 0), list(result.all())
+
+    async def set_delivery_cost(self, parcel: Parcel, cost_rub: Decimal) -> None:
+        """Persist the delivery cost calculated for a parcel.
+
+        Args:
+            parcel: ORM instance to update (must already be persistent).
+            cost_rub: Final delivery cost in rubles (high-precision decimal).
+
+        Returns:
+            None
+        """
+        # The column is defined as Float; convert explicitly.
+        parcel.delivery_cost_rub = float(cost_rub)
+        await self._commit(parcel)
