@@ -20,25 +20,6 @@ rsa = ["PyMySQL[rsa] (>=1.0)"]
 sa = ["sqlalchemy (>=1.3,<1.4)"]
 
 [[package]]
-name = "aioredis"
-version = "2.0.1"
-description = "asyncio (PEP 3156) Redis support"
-optional = false
-python-versions = ">=3.6"
-groups = ["main"]
-files = [
-    {file = "aioredis-2.0.1-py3-none-any.whl", hash = "sha256:9ac0d0b3b485d293b8ca1987e6de8658d7dafcca1cddfcd1d506cae8cdebfdd6"},
-    {file = "aioredis-2.0.1.tar.gz", hash = "sha256:eaa51aaf993f2d71f54b70527c440437ba65340588afeb786cd87c55c89cd98e"},
-]
-
-[package.dependencies]
-async-timeout = "*"
-typing-extensions = "*"
-
-[package.extras]
-hiredis = ["hiredis (>=1.0) ; implementation_name == \"cpython\""]
-
-[[package]]
 name = "alembic"
 version = "1.16.1"
 description = "A database migration tool for SQLAlchemy."
@@ -118,18 +99,6 @@ test = ["APScheduler[etcd,mongodb,redis,rethinkdb,sqlalchemy,tornado,zookeeper]"
 tornado = ["tornado (>=4.3)"]
 twisted = ["twisted"]
 zookeeper = ["kazoo"]
-
-[[package]]
-name = "async-timeout"
-version = "5.0.1"
-description = "Timeout context manager for asyncio programs"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c"},
-    {file = "async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3"},
-]
 
 [[package]]
 name = "black"
@@ -239,6 +208,29 @@ files = [
     {file = "distlib-0.3.9-py2.py3-none-any.whl", hash = "sha256:47f8c22fd27c27e25a65601af709b38e4f0a45ea4fc2e710f65755fa8caaaf87"},
     {file = "distlib-0.3.9.tar.gz", hash = "sha256:a60f20dea646b8a33f3e7772f74dc0b2d0772d2837ee1342a00645c81edf9403"},
 ]
+
+[[package]]
+name = "fakeredis"
+version = "2.29.0"
+description = "Python implementation of redis API, can be used for testing purposes."
+optional = false
+python-versions = "<4.0,>=3.7"
+groups = ["dev"]
+files = [
+    {file = "fakeredis-2.29.0-py3-none-any.whl", hash = "sha256:f644c0a69dc088455d75a9b259d101e28a1c5659381aa6d9ee6c2b31eb5a909f"},
+    {file = "fakeredis-2.29.0.tar.gz", hash = "sha256:159cebf2c53e2c2bd7d18220fa93aa5f1d7152f6b6dd7896c46234d674342398"},
+]
+
+[package.dependencies]
+redis = {version = ">=4.3", markers = "python_full_version > \"3.8.0\""}
+sortedcontainers = ">=2,<3"
+
+[package.extras]
+bf = ["pyprobables (>=0.6,<0.7)"]
+cf = ["pyprobables (>=0.6,<0.7)"]
+json = ["jsonpath-ng (>=1.6,<2.0)"]
+lua = ["lupa (>=2.1,<3.0)"]
+probabilistic = ["pyprobables (>=0.6,<0.7)"]
 
 [[package]]
 name = "fastapi"
@@ -1009,7 +1001,7 @@ version = "4.6.0"
 description = "Python client for Redis database and key-value store"
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "redis-4.6.0-py3-none-any.whl", hash = "sha256:e2b03db868160ee4591de3cb90d40ebb50a90dd302138775937f6a42b7ed183c"},
     {file = "redis-4.6.0.tar.gz", hash = "sha256:585dc516b9eb042a619ef0a39c3d7d55fe81bdb4df09a52c9cdde0d07bf1aa7d"},
@@ -1029,6 +1021,18 @@ groups = ["main"]
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
+]
+
+[[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = [
+    {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
+    {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
 
 [[package]]
@@ -1502,5 +1506,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.13"
-content-hash = "a67c1d878453c546882eba276f044f772a359d03963a10954a3b611f31273ada"
+python-versions = ">=3.13, <4.0"
+content-hash = "e97f186f7273181a179ee828a01f316cf05c4892ae10aada07c8770ca4ad464b"

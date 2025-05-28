@@ -1,4 +1,4 @@
-"""The public interface of the `app.redis' package."""
+"""The public interface of the `app.redis_client' package."""
 
 from .client import get_redis  # noqa: F401
 
