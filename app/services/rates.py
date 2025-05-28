@@ -8,7 +8,7 @@ import httpx
 import structlog
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from app.redis import get_redis
+from app.redis_client import get_redis
 
 log = structlog.get_logger(__name__)
 
