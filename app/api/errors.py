@@ -1,3 +1,9 @@
+"""Custom exception handlers for FastAPI.
+
+Handles validation errors, business logic violations, and not-found
+scenarios with consistent JSON error structure.
+"""
+
 from collections.abc import Sequence
 from typing import Any
 
@@ -5,6 +11,7 @@ from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.core.exceptions import BusinessError, NotFoundError
 from app.main import app
 
 
@@ -15,6 +22,17 @@ def _error_response(
     *,
     status: int = 400,
 ) -> JSONResponse:
+    """Return a structured JSON error response.
+
+    Args:
+        code: Machine-readable error identifier.
+        message: Human-readable explanation of the error.
+        details: Optional list of structured error details (e.g. from Pydantic).
+        status: HTTP status code to return.
+
+    Returns:
+        JSONResponse: Response with error payload.
+    """
     return JSONResponse(
         status_code=status,
         content={"code": code, "message": message, "details": details},
@@ -25,6 +43,17 @@ def _error_response(
 async def validation_exception_handler(
     _request: Request, exc: RequestValidationError
 ) -> JSONResponse:
+    """Handle 422 Unprocessable Entity from request body validation.
+
+    Triggered by malformed input that fails Pydantic validation.
+
+    Args:
+        _request: The request that triggered the error.
+        exc: The raised validation exception.
+
+    Returns:
+        JSONResponse: Error with code ``validation_error`` and details.
+    """
     return _error_response(
         "validation_error",
         "Payload validation failed",
@@ -33,6 +62,33 @@ async def validation_exception_handler(
     )
 
 
-@app.exception_handler(ValueError)
-async def value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
-    return _error_response("value_error", str(exc), None, status=400)
+@app.exception_handler(BusinessError)
+async def business_error_handler(_request: Request, exc: BusinessError) -> JSONResponse:
+    """Handle 400 Bad Request when business rules are violated.
+
+    Args:
+        _request: The request that triggered the error.
+        exc: Raised custom exception with user-facing message.
+
+    Returns:
+        JSONResponse: Error with code ``business_error``.
+    """
+    return _error_response("business_error", str(exc), None, status=400)
+
+
+@app.exception_handler(NotFoundError)
+async def not_found_error_handler(
+    _request: Request, exc: NotFoundError
+) -> JSONResponse:
+    """Handle 404 Not Found for missing or unauthorized resources.
+
+    Used when a resource is not found or belongs to another session.
+
+    Args:
+        _request: The request that triggered the error.
+        exc: Raised custom NotFoundError.
+
+    Returns:
+        JSONResponse: Error with code ``not_found``.
+    """
+    return _error_response("not_found", str(exc), None, status=404)
