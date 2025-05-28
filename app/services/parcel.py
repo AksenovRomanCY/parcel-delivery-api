@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import BusinessError, NotFoundError
 from app.models.parcel import Parcel
+from app.models.parcel_type import ParcelType
 from app.schemas.parcel import ParcelCreate, ParcelFilterParams
 from app.services.base import CRUDBase
 
@@ -29,6 +30,13 @@ class ParcelService(CRUDBase[Parcel]):
         Raises:
             BusinessError: If ``data.weight_kg`` is not strictly positive.
         """
+        # Check that parcel type exist
+        type_exists = await self.session.scalar(
+            select(ParcelType.id).where(ParcelType.id == data.parcel_type_id)
+        )
+        if not type_exists:
+            raise BusinessError("Unknown parcel type")
+
         # Application-level check that complements any DB constraint.
         if data.weight_kg <= 0:
             raise BusinessError("Weight must be positive")
