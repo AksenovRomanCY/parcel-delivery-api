@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import BusinessError, NotFoundError
@@ -111,17 +111,18 @@ class ParcelService(CRUDBase[Parcel]):
             select(Parcel)
             .options(selectinload(Parcel.parcel_type))
             .where(and_(*conditions))
-            .order_by(Parcel.id)
         )
 
         # Fast COUNT(*) via subquery to avoid re-executing the filter logic.
         total = await self.session.scalar(
-            select(Decimal("1")).select_from(stmt.subquery())
+            select(func.count()).select_from(stmt.subquery())
         )
 
         # Apply pagination.
-        result = await self.session.scalars(stmt.limit(limit).offset(offset))
-        return int(total or 0), list(result.all())
+        rows = await self.session.scalars(
+            stmt.order_by(Parcel.id).limit(limit).offset(offset)
+        )
+        return int(total or 0), list(rows.all())
 
     async def set_delivery_cost(self, parcel: Parcel, cost_rub: Decimal) -> None:
         """Persist the delivery cost calculated for a parcel.

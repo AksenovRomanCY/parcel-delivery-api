@@ -3,7 +3,7 @@
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, Field, PositiveFloat, condecimal
+from pydantic import UUID4, BaseModel, Field, PositiveFloat, condecimal
 from pydantic.alias_generators import to_camel
 
 from app.schemas.parcel_type import ParcelTypeRead
@@ -57,10 +57,10 @@ class ParcelRead(BaseModel):
 
 
 class ParcelFilterParams(BaseModel):
-    """Query-parameters for parcel list filtering."""
+    """Query-filters for a parcel list."""
 
-    type_id: str | None = Field(None, description="Filter by parcel type")
+    type_id: UUID4 | None = Field(None, description="Filter by parcel type")
     has_cost: bool | None = Field(
         None,
-        description="`true` - only with calculated price, `false` - only without it",
+        description="`true` – only with calculated price, `false` – only without",
     )
