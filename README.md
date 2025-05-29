@@ -29,10 +29,10 @@
 
 Full documentation is located in the `docs/` directory. Key sections include:
 
-- **Installation**: `docs/INSTALLATION.md` – how to deploy the service (via Docker Compose) and configure environment variables.
-- **API Usage**: `docs/USAGE.md` – overview of REST API (endpoints, example requests, Swagger UI).
-- **Testing**: `docs/TESTING.md` – how to run tests, test infrastructure overview, and coverage measurement.
-- **Architecture**: `docs/ARCHITECTURE.md` – internal design of the microservice (modules, layers, DB/cache/task scheduler interaction).
+- **[Installation](docs/INSTALLATION.md)**: – how to deploy the service (via Docker Compose) and configure environment variables.
+- **[API Usage](docs/USAGE.md)**: – overview of REST API (endpoints, example requests, Swagger UI).
+- **[Testing](docs/TESTING.md)**: – how to run tests, test infrastructure overview, and coverage measurement.
+- **[Architecture](docs/ARCHITECTURE.md)**: – internal design of the microservice (modules, layers, DB/cache/task scheduler interaction).
 
 ## Quick Start
 
@@ -41,7 +41,7 @@ To run the application locally, you need **Docker** and **Docker Compose**.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/parcel-delivery-api.git && cd parcel-delivery-api
+git clone https://github.com/AksenovRomanCY/parcel-delivery-api.git && cd parcel-delivery-api
 ```
 
 ### 2. Configure environment variables
