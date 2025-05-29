@@ -29,5 +29,8 @@ class Settings(BaseSettings):
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
 
+    LOG_LEVEL: str = "INFO"  # DEBUG, INFO, WARNING, ERROR
+    ENVIRONMENT: str = "prod"  # or "dev"
+
 
 settings = Settings()
