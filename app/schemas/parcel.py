@@ -28,13 +28,7 @@ class ParcelBase(BaseModel):
 
 
 class ParcelCreate(ParcelBase):
-    """Input request schema (POST /parcels)."""
-
-    session_id: str | None = Field(
-        None,
-        description="Not transmitted by client; filled in by middleware",
-        exclude=True,
-    )
+    pass
 
 
 class ParcelRead(BaseModel):

@@ -36,10 +36,10 @@ async def register_parcel(
         session_id: Anonymous user/session identifier (from middleware).
 
     Returns:
-        dict[str, str]: ID of the newly created parcel.
+        dict[str, session_id]: ID of the newly created parcel.
     """
     parcel = await ParcelService(db).create_from_dto(body, session_id)
-    return {"id": parcel.id}
+    return {"id": parcel.id, "session_id": session_id}
 
 
 # GET /parcels

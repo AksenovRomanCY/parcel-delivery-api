@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.core.exceptions import BusinessError, NotFoundError
 from app.models.parcel import Parcel
 from app.models.parcel_type import ParcelType
-from app.schemas.parcel import ParcelCreate, ParcelFilterParams
+from app.schemas import ParcelCreate, ParcelFilterParams
 from app.services.base import CRUDBase
 
 
