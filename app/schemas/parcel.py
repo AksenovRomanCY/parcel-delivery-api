@@ -1,4 +1,4 @@
-"""Schemes for registering and reading parcels."""
+"""Schemas for registering, listing, and filtering parcels."""
 
 from decimal import Decimal
 from typing import Annotated
@@ -8,13 +8,15 @@ from pydantic.alias_generators import to_camel
 
 from app.schemas.parcel_type import ParcelTypeRead
 
-# Limitations
+# Custom money type with non-negative constraint
 NonNegativeMoney = Annotated[
     condecimal(max_digits=14, decimal_places=2, ge=0), "Amount"
 ]
 
 
 class ParcelBase(BaseModel):
+    """Base fields shared between parcel creation and internal use."""
+
     name: str = Field(..., max_length=255, examples=["iPhone 15 Pro"])
     weight_kg: PositiveFloat = Field(..., examples=[1.2])
     declared_value_usd: NonNegativeMoney = Field(..., examples=[1299.99])
@@ -24,15 +26,20 @@ class ParcelBase(BaseModel):
         examples=["4edc1231-8ec1-4f20-90d1-6f492be3359a"],
     )
 
-    model_config = dict(alias_generator=to_camel, populate_by_name=True)
+    model_config = {
+        "alias_generator": to_camel,
+        "populate_by_name": True,
+    }
 
 
 class ParcelCreate(ParcelBase):
+    """Request body schema for registering a new parcel."""
+
     pass
 
 
 class ParcelRead(BaseModel):
-    """The response pattern when reading/listing parcels."""
+    """Response schema when returning a single parcel or a list item."""
 
     id: str
     name: str
@@ -43,15 +50,15 @@ class ParcelRead(BaseModel):
     )
     parcel_type: ParcelTypeRead
 
-    model_config = dict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
+    model_config = {
+        "alias_generator": to_camel,
+        "populate_by_name": True,
+        "from_attributes": True,
+    }
 
 
 class ParcelFilterParams(BaseModel):
-    """Query-filters for a parcel list."""
+    """Query parameters used to filter the parcel list."""
 
     type_id: UUID4 | None = Field(None, description="Filter by parcel type")
     has_cost: bool | None = Field(

@@ -31,13 +31,14 @@ def _error_response(
     status: int = 400,
     exc: Exception | None = None,
 ) -> JSONResponse:
-    """Return a structured JSON error response.
+    """Return a structured JSON error response and log it.
 
     Args:
         code: Machine-readable error identifier.
         message: Human-readable explanation of the error.
         details: Optional list of structured error details (e.g. from Pydantic).
         status: HTTP status code to return.
+        exc: Optional exception object for structured logging.
 
     Returns:
         JSONResponse: Response with error payload.
@@ -59,6 +60,15 @@ def _error_response(
 
 @app.exception_handler(Exception)
 async def internal_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Handle unexpected uncaught exceptions (500 Internal Server Error).
+
+    Args:
+        _request: The request that triggered the exception.
+        exc: The original uncaught exception.
+
+    Returns:
+        JSONResponse: Generic error response with code ``internal_error``.
+    """
     return _error_response(
         "internal_error", "Unexpected server error", None, status=500, exc=exc
     )
@@ -123,6 +133,15 @@ async def not_found_error_handler(
 async def unauthorized_error_handler(
     _request: Request, exc: UnauthorizedError
 ) -> JSONResponse:
+    """Handle 401 Unauthorized for missing or invalid authentication.
+
+    Args:
+        _request: The request that triggered the error.
+        exc: Raised UnauthorizedError.
+
+    Returns:
+        JSONResponse: Error with code ``unauthorized``.
+    """
     return _error_response("unauthorized", str(exc), None, status=401)
 
 
@@ -130,4 +149,13 @@ async def unauthorized_error_handler(
 async def forbidden_error_handler(
     _request: Request, exc: ForbiddenError
 ) -> JSONResponse:
+    """Handle 403 Forbidden for unauthorized access to a valid resource.
+
+    Args:
+        _request: The request that triggered the error.
+        exc: Raised ForbiddenError.
+
+    Returns:
+        JSONResponse: Error with code ``forbidden``.
+    """
     return _error_response("forbidden", str(exc), None, status=403)
