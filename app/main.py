@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from app.api import health_router, parcel_router, parcel_type_router
 from app.core.logger import setup_logging
+from app.core.openapi import setup_custom_openapi
 from app.middlewares.session import assign_session_id
 from app.tasks.routes import router as task_router
 
@@ -22,6 +23,9 @@ app = FastAPI(
     redoc_url=None,  # Disable ReDoc
     openapi_url="/openapi.json",  # OpenAPI schema endpoint
 )
+
+# OpenAPI schema file
+setup_custom_openapi(app)
 
 # Register HTTP middleware for assigning session IDs.
 app.middleware("http")(assign_session_id)

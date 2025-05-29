@@ -16,4 +16,6 @@ def get_session_id(request: Request) -> str:
     Raises:
         AttributeError: If the session ID was not set by middleware.
     """
+    if not hasattr(request.state, "session_id"):
+        raise RuntimeError("Session middleware must run before route handlers")
     return request.state.session_id
