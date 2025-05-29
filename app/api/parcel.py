@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session_id
+from app.core.cache import redis_cache
 from app.db.deps import get_db
 from app.schemas import (
     PaginatedResponse,
@@ -52,7 +53,9 @@ async def register_parcel(
     response_model=PaginatedResponse[ParcelRead],
     status_code=status.HTTP_200_OK,
 )
+@redis_cache("parcel_types", ttl=60)
 async def list_parcels(
+    request: Request,  # noqa
     pagination: PaginationParams = Depends(),
     filters: ParcelFilterParams = Depends(),
     db: AsyncSession = Depends(get_db),
@@ -64,6 +67,7 @@ async def list_parcels(
     presence.
 
     Args:
+        request: is used for caching.
         pagination: ``limit`` and ``offset`` query parameters.
         filters: Filter options parsed from query string.
         db: Active database session.
@@ -92,7 +96,9 @@ async def list_parcels(
     response_model=ParcelRead,
     status_code=status.HTTP_200_OK,
 )
+@redis_cache("parcel_types", ttl=60)
 async def get_parcel(
+    request: Request,  # noqa
     parcel_id: str,
     db: AsyncSession = Depends(get_db),
     session_id: str = Depends(get_session_id),
@@ -100,6 +106,7 @@ async def get_parcel(
     """Retrieve a single parcel by ID, ensuring it belongs to the session.
 
     Args:
+        request: is used for caching.
         parcel_id: Parcel's UUID.
         db: Active database session.
         session_id: Current session identifier.

@@ -5,9 +5,10 @@ The router contains read-only operations for the reference table
 ``/parcel-types`` prefix.
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import make_cache_key_no_session, redis_cache
 from app.db.deps import get_db
 from app.schemas import PaginatedResponse, PaginationParams, ParcelTypeRead
 from app.services import ParcelTypeService
@@ -20,7 +21,9 @@ router = APIRouter(prefix="/parcel-types", tags=["parcel-types"])
     response_model=PaginatedResponse[ParcelTypeRead],
     status_code=status.HTTP_200_OK,
 )
+@redis_cache("parcel_types", ttl=60, key_func=make_cache_key_no_session)
 async def list_parcel_types(
+    request: Request,  # noqa
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -32,6 +35,7 @@ async def list_parcel_types(
     friendly order.
 
     Args:
+        request: is used for caching.
         pagination: Query parameters ``limit`` (1 – 100, default 20) and
             ``offset`` injected via :class:`PaginationParams`.
         db: Async SQLAlchemy session provided by the application
