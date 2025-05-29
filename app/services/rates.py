@@ -34,7 +34,7 @@ async def get_usd_rub_rate() -> Decimal:
     key = KEY_TMPL.format(date=today)
 
     if (cached := await redis.get(key)) is not None:
-        return Decimal(cached)
+        return Decimal(cached.decode())
 
     rate = await _fetch_rate_from_cbr()
     await redis.set(key, str(rate), ex=TTL_SECONDS)
