@@ -24,10 +24,11 @@ class Settings(BaseSettings):
 
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
+    REDIS_PASS: str = "yourstrongpass"
 
     @property
     def REDIS_URL(self) -> str:
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        return f"redis://:{self.REDIS_PASS}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
 
     LOG_LEVEL: str = "INFO"  # DEBUG, INFO, WARNING, ERROR
     ENVIRONMENT: str = "prod"  # or "dev"

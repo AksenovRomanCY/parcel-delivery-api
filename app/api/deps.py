@@ -1,9 +1,10 @@
-import structlog
+import logging
+
 from fastapi import Request
 
 from app.core.exceptions import UnauthorizedError
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 def get_session_id(request: Request) -> str:

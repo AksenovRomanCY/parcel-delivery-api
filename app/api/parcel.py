@@ -1,5 +1,6 @@
-import structlog
-from fastapi import APIRouter, Depends, status
+import logging
+
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session_id
@@ -16,7 +17,7 @@ from app.services import ParcelService
 
 router = APIRouter(prefix="/parcels", tags=["parcels"])
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 # POST /parcels
@@ -42,7 +43,7 @@ async def register_parcel(
     Returns:
         dict[str, session_id]: ID of the newly created parcel.
     """
-    log.info("api_register_parcel_called", session_id=session_id)
+    log.info("api_register_parcel_called: session_id=%s", session_id)
     parcel = await ParcelService(db).create_from_dto(body, session_id)
     return {"id": parcel.id, "session_id": session_id}
 
@@ -117,6 +118,6 @@ async def get_parcel(
     Raises:
         HTTPException 404: If parcel does not exist or is unauthorized.
     """
-    log.info("api_get_parcel_called", parcel_id=parcel_id, session_id=session_id)
+    log.info("api_get_parcel_called: parcel_id=%s session_id=%s", parcel_id, session_id)
     parcel = await ParcelService(db).get_owned(parcel_id, session_id)
     return parcel

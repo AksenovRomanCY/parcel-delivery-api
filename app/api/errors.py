@@ -4,10 +4,10 @@ Handles validation errors, business logic violations, and not-found
 scenarios with consistent JSON error structure.
 """
 
+import logging
 from collections.abc import Sequence
 from typing import Any
 
-import structlog
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -20,7 +20,7 @@ from app.core.exceptions import (
 )
 from app.main import app
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 def _error_response(
@@ -43,13 +43,14 @@ def _error_response(
         JSONResponse: Response with error payload.
     """
     log.warning(
-        "api_error",
-        code=code,
-        message=message,
-        status=status,
-        details=details,
-        exc_info=exc if exc else None,
+        "api_error: code=%s message=%s status=%s details=%s",
+        code,
+        message,
+        status,
+        details,
+        exc_info=exc,
     )
+
     return JSONResponse(
         status_code=status,
         content={"code": code, "message": message, "details": details},

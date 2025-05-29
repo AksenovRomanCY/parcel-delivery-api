@@ -1,7 +1,7 @@
+import logging
 from decimal import Decimal
 from typing import Sequence
 
-import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +10,7 @@ from app.models.parcel import Parcel
 from app.redis_client import get_redis
 from app.services.rates import get_usd_rub_rate
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 async def _acquire_lock(ttl: int = 330) -> bool:
@@ -72,7 +72,7 @@ async def recalc_delivery_costs() -> int:
         int: Number of parcels successfully updated.
     """
     if not await _acquire_lock():
-        log.info("delivery_job_skip", reason="lock_exists")
+        log.info("delivery_job_skip: reason=lock_exists")
         return 0
 
     rate = await get_usd_rub_rate()
@@ -92,5 +92,5 @@ async def recalc_delivery_costs() -> int:
             updated += len(parcels)
 
     await get_redis().set("delivery_last_run_ts", str(updated))
-    log.info("delivery_job_done", updated=updated, rate=float(rate))
+    log.info("delivery_job_done: updated=%u, rate=%r", updated, float(rate))
     return updated

@@ -1,6 +1,6 @@
+import logging
 from decimal import Decimal
 
-import structlog
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import selectinload
 
@@ -10,7 +10,7 @@ from app.models.parcel_type import ParcelType
 from app.schemas import ParcelCreate, ParcelFilterParams
 from app.services.base import CRUDBase
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class ParcelService(CRUDBase[Parcel]):
@@ -38,7 +38,7 @@ class ParcelService(CRUDBase[Parcel]):
             select(ParcelType.id).where(ParcelType.id == data.parcel_type_id)
         )
         if not type_exists:
-            log.warning("unknown_parcel_type", parcel_type_id=data.parcel_type_id)
+            log.warning("unknown_parcel_type: parcel_type_id=%p", data.parcel_type_id)
             raise BusinessError("Unknown parcel type")
 
         # Application-level check that complements any DB constraint.
@@ -55,7 +55,7 @@ class ParcelService(CRUDBase[Parcel]):
 
         await self._commit(parcel)
 
-        log.info("parcel_created", parcel_id=parcel.id, session_id=session_id)
+        log.info("parcel_created: parcel=%p, session_id=%s", parcel.id, session_id)
         return parcel
 
     async def get_owned(self, parcel_id: str, session_id: str) -> Parcel:
@@ -80,12 +80,14 @@ class ParcelService(CRUDBase[Parcel]):
         parcel = await self.session.scalar(stmt)
 
         if parcel is None:
-            log.warning("parcel_not_found", parcel_id=parcel_id)
+            log.warning("parcel_not_found: parcel_id=%p", parcel_id)
             raise NotFoundError("Parcel not found")
 
         if parcel.session_id != session_id:
             log.warning(
-                "unauthorized_access", parcel_id=parcel_id, session_id=session_id
+                "unauthorized_access: parcel_id=%p, session_id=%s",
+                parcel_id,
+                session_id,
             )
             raise UnauthorizedError("Parcel not found")
 

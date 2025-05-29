@@ -1,16 +1,16 @@
 """Getting and caching USD→RUB rate."""
 
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Final
 
 import httpx
-import structlog
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from app.redis_client import get_redis
 
-log = structlog.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 CBR_URL: Final[str] = "https://www.cbr-xml-daily.ru/daily_json.js"
 KEY_TMPL: Final[str] = "usd_rub:{date}"
@@ -39,5 +39,5 @@ async def get_usd_rub_rate() -> Decimal:
     rate = await _fetch_rate_from_cbr()
     await redis.set(key, str(rate), ex=TTL_SECONDS)
 
-    log.info("usd_rub_rate_fetched", rate=float(rate))
+    log.info("usd_rub_rate_fetched: rate=%r", float(rate))
     return rate

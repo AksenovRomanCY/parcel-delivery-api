@@ -1,3 +1,9 @@
+"""Redis-based request caching for FastAPI handlers.
+
+Provides decorators and utilities to cache JSON-serializable responses
+based on request URL and session context.
+"""
+
 import hashlib
 import json
 from functools import wraps
