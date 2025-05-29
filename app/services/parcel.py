@@ -38,7 +38,7 @@ class ParcelService(CRUDBase[Parcel]):
             select(ParcelType.id).where(ParcelType.id == data.parcel_type_id)
         )
         if not type_exists:
-            log.warning("unknown_parcel_type: parcel_type_id=%p", data.parcel_type_id)
+            log.warning("unknown_parcel_type: parcel_type_id=%s", data.parcel_type_id)
             raise BusinessError("Unknown parcel type")
 
         # Application-level check that complements any DB constraint.
@@ -55,7 +55,7 @@ class ParcelService(CRUDBase[Parcel]):
 
         await self._commit(parcel)
 
-        log.info("parcel_created: parcel=%p, session_id=%s", parcel.id, session_id)
+        log.info("parcel_created: parcel=%s, session_id=%s", parcel.id, session_id)
         return parcel
 
     async def get_owned(self, parcel_id: str, session_id: str) -> Parcel:
@@ -80,12 +80,12 @@ class ParcelService(CRUDBase[Parcel]):
         parcel = await self.session.scalar(stmt)
 
         if parcel is None:
-            log.warning("parcel_not_found: parcel_id=%p", parcel_id)
+            log.warning("parcel_not_found: parcel_id=%s", parcel_id)
             raise NotFoundError("Parcel not found")
 
         if parcel.session_id != session_id:
             log.warning(
-                "unauthorized_access: parcel_id=%p, session_id=%s",
+                "unauthorized_access: parcel_id=%s, session_id=%s",
                 parcel_id,
                 session_id,
             )
