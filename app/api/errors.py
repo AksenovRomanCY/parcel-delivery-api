@@ -7,12 +7,20 @@ scenarios with consistent JSON error structure.
 from collections.abc import Sequence
 from typing import Any
 
+import structlog
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions import BusinessError, NotFoundError
+from app.core.exceptions import (
+    BusinessError,
+    ForbiddenError,
+    NotFoundError,
+    UnauthorizedError,
+)
 from app.main import app
+
+log = structlog.get_logger(__name__)
 
 
 def _error_response(
@@ -33,9 +41,19 @@ def _error_response(
     Returns:
         JSONResponse: Response with error payload.
     """
+    log.warning("api_error", code=code, message=message, status=status, details=details)
     return JSONResponse(
         status_code=status,
         content={"code": code, "message": message, "details": details},
+    )
+
+
+@app.exception_handler(Exception)
+async def internal_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:  # noqa
+    return _error_response(
+        "internal_error", "Unexpected server error", None, status=500
     )
 
 
@@ -92,3 +110,17 @@ async def not_found_error_handler(
         JSONResponse: Error with code ``not_found``.
     """
     return _error_response("not_found", str(exc), None, status=404)
+
+
+@app.exception_handler(UnauthorizedError)
+async def unauthorized_error_handler(
+    _request: Request, exc: UnauthorizedError
+) -> JSONResponse:
+    return _error_response("unauthorized", str(exc), None, status=401)
+
+
+@app.exception_handler(ForbiddenError)
+async def forbidden_error_handler(
+    _request: Request, exc: ForbiddenError
+) -> JSONResponse:
+    return _error_response("forbidden", str(exc), None, status=403)
