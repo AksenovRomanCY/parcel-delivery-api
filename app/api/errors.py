@@ -29,6 +29,7 @@ def _error_response(
     details: Sequence[dict[str, Any]] | None = None,
     *,
     status: int = 400,
+    exc: Exception | None = None,
 ) -> JSONResponse:
     """Return a structured JSON error response.
 
@@ -41,7 +42,14 @@ def _error_response(
     Returns:
         JSONResponse: Response with error payload.
     """
-    log.warning("api_error", code=code, message=message, status=status, details=details)
+    log.warning(
+        "api_error",
+        code=code,
+        message=message,
+        status=status,
+        details=details,
+        exc_info=exc if exc else None,
+    )
     return JSONResponse(
         status_code=status,
         content={"code": code, "message": message, "details": details},
@@ -49,11 +57,9 @@ def _error_response(
 
 
 @app.exception_handler(Exception)
-async def internal_error_handler(
-    _request: Request, exc: Exception
-) -> JSONResponse:  # noqa
+async def internal_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     return _error_response(
-        "internal_error", "Unexpected server error", None, status=500
+        "internal_error", "Unexpected server error", None, status=500, exc=exc
     )
 
 

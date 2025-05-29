@@ -1,4 +1,9 @@
+import structlog
 from fastapi import Request
+
+from app.core.exceptions import UnauthorizedError
+
+log = structlog.get_logger(__name__)
 
 
 def get_session_id(request: Request) -> str:
@@ -17,5 +22,6 @@ def get_session_id(request: Request) -> str:
         AttributeError: If the session ID was not set by middleware.
     """
     if not hasattr(request.state, "session_id"):
-        raise RuntimeError("Session middleware must run before route handlers")
+        log.warning("missing_session_id")
+        raise UnauthorizedError("Missing session ID")
     return request.state.session_id

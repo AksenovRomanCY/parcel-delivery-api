@@ -5,7 +5,7 @@ attached, even if the client is anonymous. The session ID is stored in
 the request state and propagated back in the response headers.
 """
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import structlog
 from fastapi import Request, Response
@@ -35,6 +35,13 @@ async def assign_session_id(request: Request, call_next):
     if not session:
         session = str(uuid4())
         log.debug("new_session_id_assigned", session_id=session)
+    else:
+        try:
+            UUID(session)
+        except ValueError:
+            log.warning("invalid_session_id_format", session_id=session)
+            session = str(uuid4())
+            log.debug("new_session_id_assigned", session_id=session)
 
     # Store the session ID in request state so app code can access it.
     request.state.session_id = session
