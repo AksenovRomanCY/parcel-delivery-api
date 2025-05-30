@@ -1,10 +1,11 @@
 import logging
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session_id
 from app.core.cache import redis_cache
+from app.core.exceptions import NotFoundError, UnauthorizedError
 from app.db.deps import get_db
 from app.schemas import (
     PaginatedResponse,
@@ -119,5 +120,10 @@ async def get_parcel(
         HTTPException 404: If parcel does not exist or is unauthorized.
     """
     log.info("api_get_parcel_called: parcel_id=%s session_id=%s", parcel_id, session_id)
-    parcel = await ParcelService(db).get_owned(parcel_id, session_id)
+    try:
+        parcel = await ParcelService(db).get_owned(parcel_id, session_id)
+    except UnauthorizedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    except NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return parcel

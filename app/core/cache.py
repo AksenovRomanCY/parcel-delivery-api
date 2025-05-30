@@ -17,6 +17,7 @@ from functools import wraps
 from typing import Any, Callable, Coroutine
 
 from fastapi import Request
+from fastapi.encoders import jsonable_encoder
 from redis.asyncio import Redis
 
 from app.redis_client import get_redis
@@ -104,7 +105,12 @@ def redis_cache(
 
             result = await fn(request, *args, **kwargs)
 
-            await redis.set(key, json.dumps(result), ex=ttl)
+            serializable = jsonable_encoder(result)
+            await redis.set(
+                key,
+                json.dumps(serializable),
+                ex=ttl,
+            )
             return result
 
         return wrapper

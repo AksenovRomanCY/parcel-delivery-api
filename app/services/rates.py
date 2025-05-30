@@ -28,16 +28,15 @@ async def _fetch_rate_from_cbr() -> Decimal:
 
 
 async def get_usd_rub_rate() -> Decimal:
-    """Get the current course using Redis cache for 10 min."""
     redis = get_redis()
     today = datetime.now(timezone.utc).date().isoformat()
     key = KEY_TMPL.format(date=today)
 
     if (cached := await redis.get(key)) is not None:
-        return Decimal(cached.decode())
+        raw = cached.decode() if isinstance(cached, (bytes, bytearray)) else cached
+        return Decimal(raw)
 
     rate = await _fetch_rate_from_cbr()
     await redis.set(key, str(rate), ex=TTL_SECONDS)
-
     log.info("usd_rub_rate_fetched: rate=%r", float(rate))
     return rate
