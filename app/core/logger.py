@@ -11,18 +11,11 @@ from app.core.settings import settings
 
 
 def setup_logging() -> None:
-    """Initialize application-wide logging configuration.
-
-    Applies a unified format to stdout logging and configures logging
-    levels for internal and third-party modules like Uvicorn and SQLAlchemy.
-
-    Reads log level from ``settings.LOG_LEVEL`` (e.g., "INFO", "DEBUG").
-    """
+    """Initialize application-wide logging configuration."""
     level = logging.getLevelName(settings.LOG_LEVEL)
 
     fmt = "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"
-
     logging.basicConfig(
         level=level,
         format=fmt,
@@ -31,17 +24,27 @@ def setup_logging() -> None:
         force=True,
     )
 
-    # Configure known loggers for consistency and visibility.
-    for logger_name in (
-        "uvicorn",
-        "uvicorn.error",
-        "uvicorn.access",
-        "sqlalchemy",
-        "alembic",
-    ):
-        logging.getLogger(logger_name).setLevel(level)
-        logging.getLogger(logger_name).propagate = True
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        log = logging.getLogger(name)
+        log.handlers.clear()
+        log.propagate = True
+        log.setLevel(level)
 
-    # Fine-tune verbosity for specific SQLAlchemy submodules.
-    logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
-    logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+    noisy_sql_loggers = (
+        "sqlalchemy",
+        "sqlalchemy.engine",
+        "sqlalchemy.orm",
+        "sqlalchemy.pool",
+        "alembic",
+    )
+    for name in noisy_sql_loggers:
+        log = logging.getLogger(name)
+        log.handlers.clear()
+        log.propagate = True
+
+    logging.getLogger("sqlalchemy").setLevel(level)
+    logging.getLogger("alembic").setLevel(level)
+
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.orm").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.pool").setLevel(logging.ERROR)
