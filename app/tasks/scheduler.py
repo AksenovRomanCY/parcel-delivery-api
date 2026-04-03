@@ -2,6 +2,7 @@ from asyncio import AbstractEventLoop
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from app.core.settings import settings
 from app.tasks.delivery import recalc_delivery_costs
 
 
@@ -21,7 +22,7 @@ def init_scheduler(loop: AbstractEventLoop) -> AsyncIOScheduler:
     scheduler.add_job(
         recalc_delivery_costs,
         trigger="cron",  # Run on a recurring schedule.
-        minute="*/5",  # Every 5 minutes.
+        minute=f"*/{settings.DELIVERY_JOB_INTERVAL_MIN}",
         id="recalc_delivery",  # Unique job ID to allow replacement.
         max_instances=1,  # Prevent overlap if previous run hangs.
         coalesce=True,  # Skip intermediate missed runs.

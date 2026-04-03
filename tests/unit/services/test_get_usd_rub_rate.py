@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
@@ -36,7 +36,7 @@ async def test_get_usd_rub_rate_fetch_and_cache(mock_fetch, mock_get_redis):
     mock_fetch.return_value = Decimal("90.5678")
 
     result = await get_usd_rub_rate()
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     expected_key = KEY_TMPL.format(date=today)
 
     assert result == Decimal("90.5678")

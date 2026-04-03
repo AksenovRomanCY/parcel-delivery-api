@@ -25,4 +25,4 @@ def get_session_id(request: Request) -> str:
     if not hasattr(request.state, "session_id"):
         log.warning("missing_session_id")
         raise UnauthorizedError("Missing session ID")
-    return request.state.session_id
+    return str(request.state.session_id)

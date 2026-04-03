@@ -16,7 +16,7 @@ class TestParcelService:
         """Should create a parcel when input is valid and type exists."""
         dto = ParcelCreate(
             name="Test Parcel",
-            weight_kg=1.0,
+            weight_kg=Decimal("1.000"),
             declared_value_usd=Decimal("100.00"),
             parcel_type_id=str(uuid4()),
         )
@@ -30,13 +30,13 @@ class TestParcelService:
         assert parcel.name == dto.name
         assert parcel.weight_kg == dto.weight_kg
         assert parcel.session_id == session_id
-        assert parcel.declared_value_usd == float(dto.declared_value_usd)
+        assert parcel.declared_value_usd == dto.declared_value_usd
 
     async def test_create_invalid_type(self, mock_session):
         """Should raise BusinessError if parcel type doesn't exist."""
         dto = ParcelCreate(
             name="Test Parcel",
-            weight_kg=1.0,
+            weight_kg=Decimal("1.000"),
             declared_value_usd=Decimal("100.00"),
             parcel_type_id=str(uuid4()),
         )
@@ -51,8 +51,8 @@ class TestParcelService:
         parcel = Parcel(
             id=str(uuid4()),
             name="X",
-            weight_kg=1.0,
-            declared_value_usd=100.0,
+            weight_kg=Decimal("1.000"),
+            declared_value_usd=Decimal("100.00"),
             parcel_type_id=str(uuid4()),
             session_id="s1",
         )
@@ -76,8 +76,8 @@ class TestParcelService:
         parcel = Parcel(
             id="123",
             name="X",
-            weight_kg=1.0,
-            declared_value_usd=100.0,
+            weight_kg=Decimal("1.000"),
+            declared_value_usd=Decimal("100.00"),
             parcel_type_id="type",
             session_id="s2",
         )
@@ -102,24 +102,24 @@ async def test_list_owned_no_filters(mock_session):
         Parcel(
             id=str(uuid4()),
             name="Parcel 1",
-            weight_kg=1,
-            declared_value_usd=10,
+            weight_kg=Decimal("1.000"),
+            declared_value_usd=Decimal("10.00"),
             parcel_type_id="type1",
             session_id="s1",
         ),
         Parcel(
             id=str(uuid4()),
             name="Parcel 2",
-            weight_kg=2,
-            declared_value_usd=20,
+            weight_kg=Decimal("2.000"),
+            declared_value_usd=Decimal("20.00"),
             parcel_type_id="type2",
             session_id="s1",
         ),
         Parcel(
             id=str(uuid4()),
             name="Parcel 3",
-            weight_kg=3,
-            declared_value_usd=30,
+            weight_kg=Decimal("3.000"),
+            declared_value_usd=Decimal("30.00"),
             parcel_type_id="type3",
             session_id="s1",
         ),
@@ -154,11 +154,11 @@ async def test_list_owned_with_filters(mock_session):
         Parcel(
             id=str(uuid4()),
             name="Filtered Parcel",
-            weight_kg=2,
-            declared_value_usd=20,
+            weight_kg=Decimal("2.000"),
+            declared_value_usd=Decimal("20.00"),
             parcel_type_id=valid_uuid,
             session_id="s1",
-            delivery_cost_rub=200,
+            delivery_cost_rub=Decimal("200.00"),
         )
     ]
 

@@ -57,7 +57,9 @@ async def test_recalc_delivery_costs_updates(
 ):
     """Should recalculate delivery cost for unpriced parcels and persist them."""
     # Simulate one batch with one parcel
-    mock_parcel = MagicMock(weight_kg=2.0, declared_value_usd="100.0")
+    mock_parcel = MagicMock(
+        weight_kg=Decimal("2.000"), declared_value_usd=Decimal("100.00")
+    )
     mock_fetch_unpriced.side_effect = [[mock_parcel], []]  # одна итерация
     mock_session = AsyncMock()
     mock_session_local.return_value.__aenter__.return_value = mock_session

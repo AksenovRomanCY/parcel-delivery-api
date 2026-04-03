@@ -1,6 +1,7 @@
+from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import Float, ForeignKey, String
+from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -31,14 +32,14 @@ class Parcel(Base):
         doc="Human-readable parcel name (e.g. 'Laptop bag').",
     )
 
-    weight_kg: Mapped[float] = mapped_column(
-        Float,
+    weight_kg: Mapped[Decimal] = mapped_column(
+        Numeric(10, 3),
         nullable=False,
         doc="Weight in kilograms, used for cost calculation.",
     )
 
-    declared_value_usd: Mapped[float] = mapped_column(
-        Float,
+    declared_value_usd: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
         nullable=False,
         doc="Declared customs value in USD.",
     )
@@ -49,8 +50,8 @@ class Parcel(Base):
         doc="Anonymous session ID that owns this parcel.",
     )
 
-    delivery_cost_rub: Mapped[float | None] = mapped_column(
-        Float,
+    delivery_cost_rub: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2),
         nullable=True,
         doc="Final delivery cost in RUB, calculated asynchronously.",
     )

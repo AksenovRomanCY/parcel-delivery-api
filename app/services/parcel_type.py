@@ -1,5 +1,3 @@
-from typing import Iterable
-
 from sqlalchemy import func, select
 
 from app.models.parcel_type import ParcelType
@@ -12,7 +10,7 @@ class ParcelTypeService(CRUDBase[ParcelType]):
     # Concrete SQLAlchemy model
     model = ParcelType
 
-    async def list_all(self) -> Iterable[ParcelType]:
+    async def list_all(self) -> list[ParcelType]:
         """Return every parcel type sorted alphabetically.
 
         Returns:
@@ -23,7 +21,7 @@ class ParcelTypeService(CRUDBase[ParcelType]):
 
         # Fetch the data as ORM objects.
         res = await self.session.scalars(stmt)
-        return res.all()
+        return list(res.all())
 
     async def total(self) -> int:
         """Return the total number of parcel-type rows in the database.

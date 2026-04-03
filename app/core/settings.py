@@ -1,5 +1,7 @@
 """Application configuration loaded from environment variables or .env file."""
 
+from decimal import Decimal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,6 +46,19 @@ class Settings(BaseSettings):
     # Logging and environment mode
     LOG_LEVEL: str = "INFO"  # DEBUG, INFO, WARNING, ERROR
     ENVIRONMENT: str = "prod"  # or "dev"
+
+    # Delivery formula coefficients
+    DELIVERY_WEIGHT_COEFF: Decimal = Decimal("0.5")
+    DELIVERY_VALUE_COEFF: Decimal = Decimal("0.01")
+
+    # Delivery job settings
+    DELIVERY_BATCH_SIZE: int = 500
+    DELIVERY_LOCK_TTL: int = 330
+    DELIVERY_JOB_INTERVAL_MIN: int = 5
+
+    # Cache TTL (seconds)
+    CACHE_TTL_DEFAULT: int = 60
+    CACHE_TTL_RATE: int = 600
 
 
 # Singleton instance used throughout the application

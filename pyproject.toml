@@ -1,25 +1,25 @@
 [project]
 name = "parcel-delivery-api"
 version = "0.1.0"
-description = ""
+description = "REST API for parcel registration, tracking and delivery cost calculation"
 authors = [
     {name = "Aksenov Roman",email = "aksenov.nsk.r.a@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.13, <4.0"
 dependencies = [
-    "fastapi (>=0.115.12,<0.116.0)",
-    "uvicorn[standard] (>=0.34.2,<0.35.0)",
-    "sqlalchemy[asyncio] (>=2.0.41,<3.0.0)",
-    "aiomysql (>=0.2.0,<0.3.0)",
-    "alembic (>=1.16.1,<2.0.0)",
-    "pydantic (>=2.11.5,<3.0.0)",
-    "httpx (>=0.28.1,<0.29.0)",
-    "pydantic-settings (>=2.9.1,<3.0.0)",
-    "pymysql (>=1.1.1,<2.0.0)",
-    "tenacity (>=9.1.2,<10.0.0)",
-    "apscheduler (>=3.11.0,<4.0.0)",
-    "redis (>=4.5.0,<5.0.0)",
+    "fastapi>=0.115.12,<1.0.0",
+    "uvicorn[standard]>=0.34.2,<1.0.0",
+    "sqlalchemy[asyncio]>=2.0.41,<3.0.0",
+    "aiomysql>=0.2.0,<1.0.0",
+    "alembic>=1.16.1,<2.0.0",
+    "pydantic>=2.11.5,<3.0.0",
+    "httpx>=0.28.1,<1.0.0",
+    "pydantic-settings>=2.9.1,<3.0.0",
+    "pymysql>=1.1.1,<2.0.0",
+    "tenacity>=9.1.2,<10.0.0",
+    "apscheduler>=3.11.0,<4.0.0",
+    "redis>=5.0.0,<8.0.0",
 ]
 
 
@@ -28,24 +28,38 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
-isort = "^5.10.1"
+ruff = ">=0.11.0"
+mypy = "^1.15.0"
 pre-commit = "^4.2.0"
 pytest = "^8.3.5"
 pytest-asyncio = "^1.0.0"
 
-
-[tool.black]
+[tool.ruff]
+target-version = "py313"
 line-length = 88
-target-version = ["py313"]
 
-[tool.isort]
-profile = "black"
-line_length = 88
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-known_first_party = ["app"]
-known_third_party = ["fastapi", "uvicorn", "sqlalchemy", "apscheduler","tenacity", "aiomysql", "alembic", "pydantic", "httpx", "redis", "pydantic_settings", "pymysql"]
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008", "UP046"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests", "tests.*"]
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra -q"

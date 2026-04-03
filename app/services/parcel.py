@@ -48,7 +48,7 @@ class ParcelService(CRUDBase[Parcel]):
         parcel = Parcel(
             name=data.name,
             weight_kg=data.weight_kg,
-            declared_value_usd=float(data.declared_value_usd),
+            declared_value_usd=data.declared_value_usd,
             parcel_type_id=data.parcel_type_id,
             session_id=session_id,
         )
@@ -149,6 +149,5 @@ class ParcelService(CRUDBase[Parcel]):
         Returns:
             None
         """
-        # The column is defined as Float; convert explicitly.
-        parcel.delivery_cost_rub = float(cost_rub)
+        parcel.delivery_cost_rub = cost_rub
         await self._commit(parcel)

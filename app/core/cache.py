@@ -13,8 +13,9 @@ async def get_resource(request: Request):
 
 import hashlib
 import json
+from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder

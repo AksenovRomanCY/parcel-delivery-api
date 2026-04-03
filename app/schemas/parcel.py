@@ -3,22 +3,20 @@
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import UUID4, BaseModel, Field, PositiveFloat, condecimal
+from pydantic import UUID4, BaseModel, Field
 from pydantic.alias_generators import to_camel
 
 from app.schemas.parcel_type import ParcelTypeRead
 
-# Custom money type with non-negative constraint
-NonNegativeMoney = Annotated[
-    condecimal(max_digits=14, decimal_places=2, ge=0), "Amount"
-]
+PositiveWeight = Annotated[Decimal, Field(gt=0, max_digits=10, decimal_places=3)]
+NonNegativeMoney = Annotated[Decimal, Field(ge=0, max_digits=14, decimal_places=2)]
 
 
 class ParcelBase(BaseModel):
     """Base fields shared between parcel creation and internal use."""
 
     name: str = Field(..., max_length=255, examples=["iPhone 15 Pro"])
-    weight_kg: PositiveFloat = Field(..., examples=[1.2])
+    weight_kg: PositiveWeight = Field(..., examples=[1.2])
     declared_value_usd: NonNegativeMoney = Field(..., examples=[1299.99])
     parcel_type_id: str = Field(
         ...,
@@ -43,7 +41,7 @@ class ParcelRead(BaseModel):
 
     id: str
     name: str
-    weight_kg: float
+    weight_kg: Decimal
     declared_value_usd: Decimal
     delivery_cost_rub: Decimal | None = Field(
         None, description="If not already calculated — `null`"
