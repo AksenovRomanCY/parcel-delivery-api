@@ -49,14 +49,19 @@ def _run_migrations():
 async def _flush_redis():
     """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test.
 
-    Resets the singleton to avoid event-loop mismatch between tests.
+    Also resets the Redis singleton and disposes the DB engine pool
+    to avoid event-loop mismatch.
     """
     from redis.asyncio import Redis
 
     from app.core.settings import settings
+    from app.db.session import engine
     from app.redis_client import client as redis_module
 
-    # Reset the singleton so a fresh connection is created on the current event loop.
+    # Dispose the DB engine pool so connections are recreated on the current loop.
+    await engine.dispose()
+
+    # Reset the Redis singleton so it reconnects on the current loop.
     if redis_module._redis is not None:
         with contextlib.suppress(Exception):
             await redis_module._redis.aclose()
