@@ -63,3 +63,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-ra -q"
+markers = [
+    "unit: unit tests (no external dependencies)",
+    "integration: integration tests (requires DB and Redis)",
+]

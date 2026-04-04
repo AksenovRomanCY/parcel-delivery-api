@@ -7,6 +7,7 @@ for the Parcel Delivery API.
 from fastapi import FastAPI
 
 from app.api import health_router, parcel_router, parcel_type_router
+from app.api.errors import register_exception_handlers
 from app.core.logger import setup_logging
 from app.core.openapi import setup_custom_openapi
 from app.middlewares.session import assign_session_id
@@ -23,6 +24,9 @@ app = FastAPI(
     redoc_url=None,  # Disable ReDoc
     openapi_url="/openapi.json",  # OpenAPI schema endpoint
 )
+
+# Register custom exception handlers for structured error responses.
+register_exception_handlers(app)
 
 # OpenAPI schema file
 setup_custom_openapi(app)
