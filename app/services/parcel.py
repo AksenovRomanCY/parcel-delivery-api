@@ -5,6 +5,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import BusinessError, NotFoundError, UnauthorizedError
+from app.core.metrics import PARCELS_CREATED
 from app.core.settings import settings
 from app.models.parcel import Parcel
 from app.models.parcel_type import ParcelType
@@ -50,6 +51,7 @@ class ParcelService(CRUDBase[Parcel]):
 
         await self._commit(parcel)
 
+        PARCELS_CREATED.labels(parcel_type=str(data.parcel_type_id)).inc()
         log.info("parcel_created: parcel=%s, owner_id=%s", parcel.id, owner_id)
         return parcel
 

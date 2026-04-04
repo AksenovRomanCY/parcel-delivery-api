@@ -7,6 +7,7 @@ for the Parcel Delivery API.
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -15,13 +16,15 @@ from app.api.errors import register_exception_handlers
 from app.core.logger import setup_logging
 from app.core.openapi import setup_custom_openapi
 from app.core.rate_limit import limiter
+from app.core.sentry import init_sentry
 from app.core.settings import settings
 from app.middlewares.session import assign_session_id
 from app.redis_client import close_redis
 from app.tasks.routes import router as task_router
 
-# Initialize structured logging for the application.
+# Initialize structured logging and Sentry error tracking.
 setup_logging()
+init_sentry(release="0.1.0")
 
 
 @asynccontextmanager
@@ -40,6 +43,13 @@ app = FastAPI(
     openapi_url="/openapi.json",  # OpenAPI schema endpoint
     lifespan=lifespan,
 )
+
+# Prometheus metrics instrumentation.
+Instrumentator(
+    should_group_status_codes=True,
+    should_respect_env_var=True,
+    env_var_name="ENABLE_METRICS",
+).instrument(app).expose(app, endpoint="/metrics")
 
 # Register custom exception handlers for structured error responses.
 register_exception_handlers(app)

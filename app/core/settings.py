@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MIN: int = 30
     AUTH_REQUIRED: bool = False
 
+    # Observability
+    ENABLE_METRICS: bool = True
+    SENTRY_DSN: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+
 
 # Singleton instance used throughout the application
 settings = Settings()

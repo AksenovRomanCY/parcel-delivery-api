@@ -1,10 +1,12 @@
 import logging
+import time
 from collections.abc import Sequence
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import DELIVERY_RECALC_DURATION, DELIVERY_RECALC_PARCELS
 from app.core.settings import settings
 from app.db.session import AsyncSessionLocal
 from app.models.parcel import Parcel
@@ -80,6 +82,7 @@ async def recalc_delivery_costs() -> int:
         log.info("delivery_job_skip: reason=lock_exists")
         return 0
 
+    start = time.monotonic()
     rate = await get_usd_rub_rate()
     updated = 0
 
@@ -93,6 +96,9 @@ async def recalc_delivery_costs() -> int:
                 )
             await session.commit()
             updated += len(parcels)
+
+    DELIVERY_RECALC_DURATION.observe(time.monotonic() - start)
+    DELIVERY_RECALC_PARCELS.inc(updated)
 
     await get_redis().set("delivery_last_run_ts", str(updated))
     log.info("delivery_job_done: updated=%u, rate=%r", updated, float(rate))

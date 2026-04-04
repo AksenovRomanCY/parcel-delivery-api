@@ -490,9 +490,9 @@ Celery для async-стека.
 - [x] 3.4 Graceful shutdown Redis: `aclose()` в lifespan + scheduler signal handler
 
 ### Фаза 4 — Observability & Infrastructure
-- [ ] 4.1 Prometheus метрики: instrumentator + кастомные counters/histograms
-- [ ] 4.2 Sentry: SDK + конфигурация через env
-- [ ] 4.3 Миграция на PostgreSQL или обновление MySQL 8.0 → 8.4
+- [x] 4.1 Prometheus метрики: instrumentator + кастомные counters/histograms
+- [x] 4.2 Sentry: SDK + конфигурация через env
+- [x] 4.3 Миграция на PostgreSQL или обновление MySQL 8.0 → 8.4
 
 ---
 

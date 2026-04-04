@@ -43,6 +43,8 @@ async def test_fetch_unpriced():
 
 
 @pytest.mark.asyncio
+@patch("app.tasks.delivery.DELIVERY_RECALC_PARCELS")
+@patch("app.tasks.delivery.DELIVERY_RECALC_DURATION")
 @patch("app.tasks.delivery._acquire_lock", return_value=True)
 @patch("app.tasks.delivery.get_usd_rub_rate", return_value=Decimal("90.0"))
 @patch("app.tasks.delivery._fetch_unpriced")
@@ -54,6 +56,8 @@ async def test_recalc_delivery_costs_updates(
     mock_fetch_unpriced,
     mock_get_rate,  # noqa
     mock_acquire_lock,  # noqa
+    mock_recalc_duration,
+    mock_recalc_parcels,
 ):
     """Should recalculate delivery cost for unpriced parcels and persist them."""
     # Simulate one batch with one parcel
@@ -70,3 +74,5 @@ async def test_recalc_delivery_costs_updates(
     assert updated == 1
     mock_session.commit.assert_called_once()
     mock_redis.set.assert_called_once_with("delivery_last_run_ts", "1")
+    mock_recalc_duration.observe.assert_called_once()
+    mock_recalc_parcels.inc.assert_called_once_with(1)
