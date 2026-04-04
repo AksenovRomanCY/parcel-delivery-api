@@ -4,7 +4,7 @@ from redis.asyncio import Redis
 
 from app.core.settings import settings
 
-__all__ = ["get_redis"]
+__all__ = ["get_redis", "close_redis"]
 
 _redis: Redis | None = None
 
@@ -15,3 +15,11 @@ def get_redis() -> Redis:
     if _redis is None:
         _redis = Redis.from_url(settings.REDIS_URL, decode_responses=True)
     return _redis
+
+
+async def close_redis() -> None:
+    """Close the Redis connection and reset the singleton."""
+    global _redis
+    if _redis is not None:
+        await _redis.aclose()
+        _redis = None

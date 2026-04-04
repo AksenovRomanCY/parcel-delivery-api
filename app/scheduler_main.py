@@ -8,6 +8,7 @@ import asyncio
 import signal
 
 from app.core.logger import setup_logging
+from app.redis_client import close_redis
 from app.tasks.scheduler import init_scheduler
 
 
@@ -19,19 +20,23 @@ def main() -> None:
     """
     setup_logging()
 
-    # Create and activate a dedicated asyncio event loop.
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    # Initialize the APScheduler instance bound to this event loop.
     scheduler = init_scheduler(loop)
     scheduler.start()
 
-    # Ensure clean shutdown on SIGINT / SIGTERM.
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, scheduler.shutdown)
+    def _shutdown() -> None:
+        scheduler.shutdown()
+        loop.create_task(_cleanup_and_stop())
 
-    # Enter infinite loop to keep the scheduler alive.
+    async def _cleanup_and_stop() -> None:
+        await close_redis()
+        loop.stop()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, _shutdown)
+
     loop.run_forever()
 
 

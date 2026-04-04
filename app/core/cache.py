@@ -21,32 +21,29 @@ from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from redis.asyncio import Redis
 
+from app.core.settings import settings
 from app.redis_client import get_redis
 
 SESSION_HEADER = "X-Session-Id"
 
 
 def make_cache_key(prefix: str, request: Request, *_, **__) -> str:
-    """Build a session-aware cache key from request metadata.
+    """Build an identity-aware cache key from request metadata.
 
-    Includes the session ID, request path, and query string. Used when
-    response is user-specific and must be cached per session.
-
-    Args:
-        prefix: Namespace prefix to scope cache keys (e.g. "parcel_list").
-        request: FastAPI request object used to extract context.
-
-    Returns:
-        str: SHA256-based Redis cache key with the given prefix.
+    Uses Authorization header (JWT mode) or X-Session-Id (session mode)
+    as the identity component, along with path and query string.
     """
-    session_id = request.headers.get(SESSION_HEADER, "anon")
-    path = str(request.url.path)
-    query = str(request.url.query)
+    if settings.AUTH_REQUIRED:
+        auth_header = request.headers.get("Authorization", "anon")
+        identity = hashlib.sha256(auth_header.encode()).hexdigest()[:16]
+    else:
+        identity = request.headers.get(SESSION_HEADER, "anon")
+
     raw_key = json.dumps(
         {
-            "session": session_id,
-            "path": path,
-            "query": query,
+            "identity": identity,
+            "path": str(request.url.path),
+            "query": str(request.url.query),
         },
         sort_keys=True,
     )

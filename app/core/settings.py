@@ -60,6 +60,24 @@ class Settings(BaseSettings):
     CACHE_TTL_DEFAULT: int = 60
     CACHE_TTL_RATE: int = 600
 
+    # Rate limiting
+    RATE_LIMIT_DEFAULT: str = "100/minute"
+    RATE_LIMIT_CREATE: str = "20/minute"
+    RATE_LIMIT_LIST: str = "60/minute"
+    RATE_LIMIT_DETAIL: str = "60/minute"
+    RATE_LIMIT_PARCEL_TYPES: str = "100/minute"
+    RATE_LIMIT_RECALC: str = "5/minute"
+
+    @property
+    def REDIS_RATE_LIMIT_URL(self) -> str:
+        return f"redis://:{self.REDIS_PASS}@{self.REDIS_HOST}:{self.REDIS_PORT}/1"
+
+    # JWT Authentication
+    JWT_SECRET_KEY: str = "change-me-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MIN: int = 30
+    AUTH_REQUIRED: bool = False
+
 
 # Singleton instance used throughout the application
 settings = Settings()

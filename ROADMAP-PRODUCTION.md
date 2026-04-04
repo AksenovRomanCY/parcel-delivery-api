@@ -484,10 +484,10 @@ Celery для async-стека.
 ## Чек-лист
 
 ### Фаза 3 — Security
-- [ ] 3.1 Rate limiting (slowapi) + конфигурация лимитов
-- [ ] 3.2 JWT аутентификация: модель User, эндпоинты auth, миграция session_id → user_id
-- [ ] 3.3 CHECK constraints в MySQL (weight > 0, value >= 0)
-- [ ] 3.4 Graceful shutdown Redis: `aclose()` в lifespan + scheduler signal handler
+- [x] 3.1 Rate limiting (slowapi) + конфигурация лимитов
+- [x] 3.2 JWT аутентификация: модель User, эндпоинты auth, миграция session_id → user_id
+- [x] 3.3 CHECK constraints в MySQL (weight > 0, value >= 0)
+- [x] 3.4 Graceful shutdown Redis: `aclose()` в lifespan + scheduler signal handler
 
 ### Фаза 4 — Observability & Infrastructure
 - [ ] 4.1 Prometheus метрики: instrumentator + кастомные counters/histograms

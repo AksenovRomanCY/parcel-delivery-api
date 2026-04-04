@@ -128,7 +128,7 @@ async def test_list_owned_no_filters(mock_session):
     mock_session.scalars.return_value = mock_scalars_result
 
     total, parcels = await svc.list_owned(
-        session_id="s1",
+        owner_id="s1",
         filters=ParcelFilterParams(type_id=None, has_cost=None),
         limit=10,
         offset=0,
@@ -167,7 +167,7 @@ async def test_list_owned_with_filters(mock_session):
     filters = ParcelFilterParams(type_id=valid_uuid, has_cost=True)
 
     total, parcels = await svc.list_owned(
-        session_id="s1",
+        owner_id="s1",
         filters=filters,
         limit=10,
         offset=0,

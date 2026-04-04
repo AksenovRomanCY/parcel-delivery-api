@@ -1,7 +1,7 @@
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import ForeignKey, Numeric, String
+from sqlalchemy import CheckConstraint, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -17,53 +17,59 @@ class Parcel(Base):
     """
 
     __tablename__ = "parcel"
+    __table_args__ = (
+        CheckConstraint("weight_kg > 0", name="ck_parcel_weight_positive"),
+        CheckConstraint("declared_value_usd >= 0", name="ck_parcel_value_non_negative"),
+        CheckConstraint(
+            "delivery_cost_rub >= 0 OR delivery_cost_rub IS NULL",
+            name="ck_parcel_cost_non_negative",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
         default=lambda: str(uuid4()),
         nullable=False,
-        doc="Globally unique ID (UUIDv4).",
     )
 
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        doc="Human-readable parcel name (e.g. 'Laptop bag').",
     )
 
     weight_kg: Mapped[Decimal] = mapped_column(
         Numeric(10, 3),
         nullable=False,
-        doc="Weight in kilograms, used for cost calculation.",
     )
 
     declared_value_usd: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
-        doc="Declared customs value in USD.",
     )
 
     session_id: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        doc="Anonymous session ID that owns this parcel.",
     )
 
     delivery_cost_rub: Mapped[Decimal | None] = mapped_column(
         Numeric(12, 2),
         nullable=True,
-        doc="Final delivery cost in RUB, calculated asynchronously.",
     )
 
     parcel_type_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("parcel_type.id"),
         nullable=False,
-        doc="Foreign key to parcel type (e.g. electronics, misc).",
+    )
+
+    user_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("user.id"),
+        nullable=True,
     )
 
     parcel_type: Mapped[ParcelType] = relationship(
         backref="parcels",
-        doc="ORM relationship to the referenced ParcelType.",
     )

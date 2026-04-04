@@ -1,16 +1,14 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
+from app.core.settings import settings
+
 
 def setup_custom_openapi(app: FastAPI) -> None:
-    """Inject custom OpenAPI schema with SessionAuth support.
+    """Inject custom OpenAPI schema with the appropriate security scheme.
 
-    This function modifies the default OpenAPI schema to include a
-    reusable security scheme (based on `X-Session-Id`) and applies it
-    globally to all endpoints.
-
-    Args:
-        app: The FastAPI application instance to patch.
+    When AUTH_REQUIRED=True: uses BearerAuth (JWT).
+    When AUTH_REQUIRED=False: uses SessionAuth (X-Session-Id header).
     """
 
     def custom_openapi():
@@ -24,19 +22,28 @@ def setup_custom_openapi(app: FastAPI) -> None:
             routes=app.routes,
         )
 
-        # Define reusable security scheme
-        schema["components"]["securitySchemes"] = {
-            "SessionAuth": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "X-Session-Id",
+        if settings.AUTH_REQUIRED:
+            schema["components"]["securitySchemes"] = {
+                "BearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "bearerFormat": "JWT",
+                }
             }
-        }
-
-        # Apply scheme to all operations
-        for path in schema.get("paths", {}).values():
-            for method in path.values():
-                method.setdefault("security", []).append({"SessionAuth": []})
+            for path in schema.get("paths", {}).values():
+                for method in path.values():
+                    method.setdefault("security", []).append({"BearerAuth": []})
+        else:
+            schema["components"]["securitySchemes"] = {
+                "SessionAuth": {
+                    "type": "apiKey",
+                    "in": "header",
+                    "name": "X-Session-Id",
+                }
+            }
+            for path in schema.get("paths", {}).values():
+                for method in path.values():
+                    method.setdefault("security", []).append({"SessionAuth": []})
 
         app.openapi_schema = schema
         return app.openapi_schema

@@ -4,17 +4,32 @@ Initializes logging, middleware, routers, and OpenAPI configuration
 for the Parcel Delivery API.
 """
 
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-from app.api import health_router, parcel_router, parcel_type_router
+from fastapi import FastAPI
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from app.api import auth_router, health_router, parcel_router, parcel_type_router
 from app.api.errors import register_exception_handlers
 from app.core.logger import setup_logging
 from app.core.openapi import setup_custom_openapi
+from app.core.rate_limit import limiter
+from app.core.settings import settings
 from app.middlewares.session import assign_session_id
+from app.redis_client import close_redis
 from app.tasks.routes import router as task_router
 
 # Initialize structured logging for the application.
 setup_logging()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: clean up Redis on shutdown."""
+    yield
+    await close_redis()
+
 
 # Create the FastAPI instance with metadata and custom OpenAPI paths.
 app = FastAPI(
@@ -23,19 +38,26 @@ app = FastAPI(
     docs_url="/docs",  # Swagger UI available at /docs
     redoc_url=None,  # Disable ReDoc
     openapi_url="/openapi.json",  # OpenAPI schema endpoint
+    lifespan=lifespan,
 )
 
 # Register custom exception handlers for structured error responses.
 register_exception_handlers(app)
 
+# Rate limiting via slowapi.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # OpenAPI schema file
 setup_custom_openapi(app)
 
-# Register HTTP middleware for assigning session IDs.
-app.middleware("http")(assign_session_id)
+# Register HTTP middleware for assigning session IDs (legacy mode).
+if not settings.AUTH_REQUIRED:
+    app.middleware("http")(assign_session_id)
 
 # Mount modular routers for all API groups.
 app.include_router(health_router)
+app.include_router(auth_router)
 app.include_router(parcel_type_router)
 app.include_router(parcel_router)
 

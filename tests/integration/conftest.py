@@ -46,11 +46,20 @@ def _run_migrations():
 
 @pytest_asyncio.fixture(autouse=True)
 async def _flush_redis():
-    """Flush Redis before each test for isolation."""
+    """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test."""
     from app.redis_client import get_redis
 
     redis = get_redis()
     await redis.flushdb()
+
+    # Also flush rate-limit DB (DB 1)
+    from redis.asyncio import Redis
+
+    from app.core.settings import settings
+
+    rl_redis = Redis.from_url(settings.REDIS_RATE_LIMIT_URL, decode_responses=True)
+    await rl_redis.flushdb()
+    await rl_redis.aclose()
 
 
 @pytest_asyncio.fixture
@@ -77,3 +86,13 @@ async def parcel_type_id(client: AsyncClient) -> str:
     items = resp.json()["items"]
     assert len(items) > 0
     return items[0]["id"]
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """Direct async DB session for constraint/model-level tests."""
+    from app.db.session import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as session:
+        yield session
+        await session.rollback()
