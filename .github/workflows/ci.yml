@@ -69,8 +69,10 @@ jobs:
           poetry install --with dev --no-root
       - name: Run migrations
         run: poetry run alembic upgrade head
-      - name: Run tests
-        run: poetry run pytest --tb=short -q
+      - name: Run unit tests
+        run: poetry run pytest tests/unit/ --tb=short -q
+      - name: Run integration tests
+        run: poetry run pytest tests/integration/ --tb=short -q -o asyncio_mode=auto
 
   docker:
     runs-on: ubuntu-latest

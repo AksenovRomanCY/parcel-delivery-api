@@ -15,6 +15,7 @@ os.environ.setdefault("REDIS_HOST", "127.0.0.1")
 os.environ.setdefault("REDIS_PORT", "6379")
 os.environ.setdefault("REDIS_PASS", "")
 
+import asyncio
 import subprocess
 from uuid import uuid4
 
@@ -23,15 +24,27 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 _integration_marker = pytest.mark.integration
-_session_loop_marker = pytest.mark.asyncio(loop_scope="session")
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Auto-apply markers to every test under tests/integration/."""
+    """Auto-apply the ``integration`` marker to every test under tests/integration/."""
     for item in items:
         if "integration" in str(item.fspath):
             item.add_marker(_integration_marker)
-            item.add_marker(_session_loop_marker)
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create a single event loop shared by all integration tests and fixtures.
+
+    This prevents event-loop mismatch when module-level singletons
+    (SQLAlchemy engine, Redis) bind to the first loop and are then
+    used by subsequent tests.
+    """
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -46,7 +59,7 @@ def _run_migrations():
         pytest.fail(f"Alembic migration failed:\n{result.stderr}")
 
 
-@pytest_asyncio.fixture(loop_scope="session", autouse=True)
+@pytest_asyncio.fixture(autouse=True)
 async def _flush_redis():
     """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test."""
     from app.redis_client import get_redis
@@ -64,7 +77,7 @@ async def _flush_redis():
     await r1.aclose()
 
 
-@pytest_asyncio.fixture(loop_scope="session")
+@pytest_asyncio.fixture
 async def client():
     """Async HTTP client wired to the FastAPI ASGI app."""
     from app.main import app
@@ -80,7 +93,7 @@ def session_id() -> str:
     return str(uuid4())
 
 
-@pytest_asyncio.fixture(loop_scope="session")
+@pytest_asyncio.fixture
 async def parcel_type_id(client: AsyncClient) -> str:
     """First parcel-type ID from the seeded database."""
     resp = await client.get("/parcel-types")
@@ -90,7 +103,7 @@ async def parcel_type_id(client: AsyncClient) -> str:
     return items[0]["id"]
 
 
-@pytest_asyncio.fixture(loop_scope="session")
+@pytest_asyncio.fixture
 async def db_session():
     """Direct async DB session for constraint/model-level tests."""
     from app.db.session import AsyncSessionLocal
