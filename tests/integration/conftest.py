@@ -60,21 +60,27 @@ def _run_migrations():
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def _flush_redis():
-    """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test."""
+async def _flush_stores():
+    """Flush Redis and clean user/parcel tables before each test."""
+    from redis.asyncio import Redis
+
+    from app.core.settings import settings
+    from app.db.session import AsyncSessionLocal
     from app.redis_client import get_redis
 
     redis = get_redis()
     await redis.flushdb()
 
     # Also flush rate-limit DB (DB 1)
-    from redis.asyncio import Redis
-
-    from app.core.settings import settings
-
     r1 = Redis.from_url(settings.REDIS_RATE_LIMIT_URL, decode_responses=True)
     await r1.flushdb()
     await r1.aclose()
+
+    # Clean transactional tables for test isolation
+    async with AsyncSessionLocal() as session:
+        await session.execute(__import__("sqlalchemy").text("DELETE FROM parcel"))
+        await session.execute(__import__("sqlalchemy").text("DELETE FROM user"))
+        await session.commit()
 
 
 @pytest_asyncio.fixture

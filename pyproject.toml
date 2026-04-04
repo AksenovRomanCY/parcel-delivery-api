@@ -1,6 +1,6 @@
 [project]
 name = "parcel-delivery-api"
-version = "0.1.0"
+version = "1.0.0"
 description = "REST API for parcel registration, tracking and delivery cost calculation"
 authors = [
     {name = "Aksenov Roman",email = "aksenov.nsk.r.a@gmail.com"}

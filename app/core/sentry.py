@@ -8,7 +8,7 @@ import sentry_sdk
 from app.core.settings import settings
 
 
-def init_sentry(release: str = "0.1.0") -> None:
+def init_sentry(release: str = "1.0.0") -> None:
     """Initialize Sentry if a DSN is configured."""
     if not settings.SENTRY_DSN:
         return

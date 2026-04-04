@@ -35,7 +35,7 @@ def test_init_sentry_calls_init_when_dsn_set(mock_settings, mock_sentry_sdk):
 @patch("app.core.sentry.sentry_sdk")
 @patch("app.core.sentry.settings")
 def test_init_sentry_default_release(mock_settings, mock_sentry_sdk):
-    """Should use '0.1.0' as default release."""
+    """Should use '1.0.0' as default release."""
     mock_settings.SENTRY_DSN = "https://key@sentry.io/0"
     mock_settings.SENTRY_TRACES_SAMPLE_RATE = 0.1
     mock_settings.ENVIRONMENT = "prod"
@@ -43,4 +43,4 @@ def test_init_sentry_default_release(mock_settings, mock_sentry_sdk):
     init_sentry()
 
     call_kwargs = mock_sentry_sdk.init.call_args[1]
-    assert call_kwargs["release"] == "0.1.0"
+    assert call_kwargs["release"] == "1.0.0"

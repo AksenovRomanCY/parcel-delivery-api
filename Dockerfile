@@ -10,7 +10,7 @@ WORKDIR /build
 COPY pyproject.toml poetry.lock* ./
 
 RUN poetry export -f requirements.txt --without-hashes -o requirements.txt && \
-    pip install --no-cache-dir --prefix=/install -r requirements.txt
+    pip install --no-cache-dir --prefix=/install --ignore-installed -r requirements.txt
 
 # ── runtime ──
 FROM python:3.13-slim

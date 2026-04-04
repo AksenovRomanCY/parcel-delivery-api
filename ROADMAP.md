@@ -566,19 +566,19 @@ depends_on:
 ## Чек-лист
 
 ### Фаза 1
-- [ ] 1.1 Float → Decimal: модель, схемы, формула, миграция
-- [ ] 1.2 Ослабить version constraints в pyproject.toml
-- [ ] 1.2 Redis клиент 4.x → 5.x+
-- [ ] 1.2 MySQL image 8.0 → 8.4
-- [ ] 1.3 black + isort → Ruff
-- [ ] 1.4 Добавить mypy
-- [ ] 1.5 Вынести константы в Settings
-- [ ] 1.6 Исправить pyproject.toml: PEP 508 формат, описание, pytest.ini → pyproject.toml
+- [x] 1.1 Float → Decimal: модель, схемы, формула, миграция
+- [x] 1.2 Ослабить version constraints в pyproject.toml
+- [x] 1.2 Redis клиент 4.x → 5.x+
+- [x] 1.2 MySQL image 8.0 → 8.4
+- [x] 1.3 black + isort → Ruff
+- [x] 1.4 Добавить mypy
+- [x] 1.5 Вынести константы в Settings
+- [x] 1.6 Исправить pyproject.toml: PEP 508 формат, описание, pytest.ini → pyproject.toml
 
 ### Фаза 2
-- [ ] 2.1 GitHub Actions CI/CD
-- [ ] 2.2 Интеграционные/API тесты
-- [ ] 2.3 Multi-stage Dockerfile
-- [ ] 2.4 Redis healthcheck в docker-compose
+- [x] 2.1 GitHub Actions CI/CD
+- [x] 2.2 Интеграционные/API тесты
+- [x] 2.3 Multi-stage Dockerfile
+- [x] 2.4 Redis healthcheck в docker-compose
 
 > Продолжение → [ROADMAP-PRODUCTION.md](ROADMAP-PRODUCTION.md)
