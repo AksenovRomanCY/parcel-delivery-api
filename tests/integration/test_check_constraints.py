@@ -4,9 +4,13 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DatabaseError, IntegrityError
 
 from app.models.parcel import Parcel
+
+# MySQL may raise either IntegrityError or OperationalError (wrapped as
+# DatabaseError) for CHECK constraint violations depending on the driver.
+_check_error = (IntegrityError, DatabaseError)
 
 
 async def test_db_rejects_zero_weight(db_session, parcel_type_id):
@@ -19,7 +23,7 @@ async def test_db_rejects_zero_weight(db_session, parcel_type_id):
         parcel_type_id=parcel_type_id,
     )
     db_session.add(parcel)
-    with pytest.raises(IntegrityError):
+    with pytest.raises(_check_error):
         await db_session.flush()
 
 
@@ -33,7 +37,7 @@ async def test_db_rejects_negative_weight(db_session, parcel_type_id):
         parcel_type_id=parcel_type_id,
     )
     db_session.add(parcel)
-    with pytest.raises(IntegrityError):
+    with pytest.raises(_check_error):
         await db_session.flush()
 
 
@@ -47,7 +51,7 @@ async def test_db_rejects_negative_declared_value(db_session, parcel_type_id):
         parcel_type_id=parcel_type_id,
     )
     db_session.add(parcel)
-    with pytest.raises(IntegrityError):
+    with pytest.raises(_check_error):
         await db_session.flush()
 
 
@@ -62,7 +66,7 @@ async def test_db_rejects_negative_delivery_cost(db_session, parcel_type_id):
         parcel_type_id=parcel_type_id,
     )
     db_session.add(parcel)
-    with pytest.raises(IntegrityError):
+    with pytest.raises(_check_error):
         await db_session.flush()
 
 

@@ -15,6 +15,7 @@ os.environ.setdefault("REDIS_HOST", "127.0.0.1")
 os.environ.setdefault("REDIS_PORT", "6379")
 os.environ.setdefault("REDIS_PASS", "")
 
+import contextlib
 import subprocess
 from uuid import uuid4
 
@@ -46,20 +47,30 @@ def _run_migrations():
 
 @pytest_asyncio.fixture(autouse=True)
 async def _flush_redis():
-    """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test."""
-    from app.redis_client import get_redis
+    """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test.
 
-    redis = get_redis()
-    await redis.flushdb()
-
-    # Also flush rate-limit DB (DB 1)
+    Resets the singleton to avoid event-loop mismatch between tests.
+    """
     from redis.asyncio import Redis
 
     from app.core.settings import settings
+    from app.redis_client import client as redis_module
 
-    rl_redis = Redis.from_url(settings.REDIS_RATE_LIMIT_URL, decode_responses=True)
-    await rl_redis.flushdb()
-    await rl_redis.aclose()
+    # Reset the singleton so a fresh connection is created on the current event loop.
+    if redis_module._redis is not None:
+        with contextlib.suppress(Exception):
+            await redis_module._redis.aclose()
+        redis_module._redis = None
+
+    # Flush cache DB (DB 0)
+    r0 = Redis.from_url(settings.REDIS_URL, decode_responses=True)
+    await r0.flushdb()
+    await r0.aclose()
+
+    # Flush rate-limit DB (DB 1)
+    r1 = Redis.from_url(settings.REDIS_RATE_LIMIT_URL, decode_responses=True)
+    await r1.flushdb()
+    await r1.aclose()
 
 
 @pytest_asyncio.fixture
@@ -94,5 +105,7 @@ async def db_session():
     from app.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
-        yield session
-        await session.rollback()
+        try:
+            yield session
+        finally:
+            await session.rollback()
