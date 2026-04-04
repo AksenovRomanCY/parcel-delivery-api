@@ -17,14 +17,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install poetry
-          poetry config virtualenvs.create false
           poetry install --with dev --no-root
       - name: Ruff format check
-        run: ruff format --check .
+        run: poetry run ruff format --check .
       - name: Ruff lint
-        run: ruff check .
+        run: poetry run ruff check .
       - name: Mypy
-        run: mypy app/
+        run: poetry run mypy app/
 
   test:
     runs-on: ubuntu-latest
@@ -67,12 +66,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install poetry
-          poetry config virtualenvs.create false
           poetry install --with dev --no-root
       - name: Run migrations
-        run: alembic upgrade head
+        run: poetry run alembic upgrade head
       - name: Run tests
-        run: pytest --tb=short -q
+        run: poetry run pytest --tb=short -q
 
   docker:
     runs-on: ubuntu-latest
