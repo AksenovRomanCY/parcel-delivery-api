@@ -15,7 +15,7 @@ os.environ.setdefault("REDIS_HOST", "127.0.0.1")
 os.environ.setdefault("REDIS_PORT", "6379")
 os.environ.setdefault("REDIS_PASS", "")
 
-import contextlib
+import asyncio
 import subprocess
 from uuid import uuid4
 
@@ -33,6 +33,19 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
             item.add_marker(_integration_marker)
 
 
+@pytest.fixture(scope="session")
+def event_loop():
+    """Share a single event loop across the entire test session.
+
+    This prevents event-loop mismatch errors when module-level singletons
+    (SQLAlchemy engine, Redis client) bind to one loop and then subsequent
+    tests run on a different loop.
+    """
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _run_migrations():
     """Run alembic migrations once before all integration tests."""
@@ -47,32 +60,17 @@ def _run_migrations():
 
 @pytest_asyncio.fixture(autouse=True)
 async def _flush_redis():
-    """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test.
+    """Flush Redis cache (DB 0) and rate-limit store (DB 1) before each test."""
+    from app.redis_client import get_redis
 
-    Also resets the Redis singleton and disposes the DB engine pool
-    to avoid event-loop mismatch.
-    """
+    redis = get_redis()
+    await redis.flushdb()
+
+    # Also flush rate-limit DB (DB 1)
     from redis.asyncio import Redis
 
     from app.core.settings import settings
-    from app.db.session import engine
-    from app.redis_client import client as redis_module
 
-    # Dispose the DB engine pool so connections are recreated on the current loop.
-    await engine.dispose()
-
-    # Reset the Redis singleton so it reconnects on the current loop.
-    if redis_module._redis is not None:
-        with contextlib.suppress(Exception):
-            await redis_module._redis.aclose()
-        redis_module._redis = None
-
-    # Flush cache DB (DB 0)
-    r0 = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-    await r0.flushdb()
-    await r0.aclose()
-
-    # Flush rate-limit DB (DB 1)
     r1 = Redis.from_url(settings.REDIS_RATE_LIMIT_URL, decode_responses=True)
     await r1.flushdb()
     await r1.aclose()
