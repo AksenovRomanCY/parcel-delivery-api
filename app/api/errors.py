@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -42,7 +43,9 @@ def _error_response(
 
     return JSONResponse(
         status_code=status,
-        content={"code": code, "message": message, "details": details},
+        content=jsonable_encoder(
+            {"code": code, "message": message, "details": details}
+        ),
     )
 
 
