@@ -17,6 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install poetry
+          poetry config virtualenvs.create false
           poetry install --with dev --no-root
       - name: Ruff format check
         run: ruff format --check .
@@ -66,6 +67,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install poetry
+          poetry config virtualenvs.create false
           poetry install --with dev --no-root
       - name: Run migrations
         run: alembic upgrade head
