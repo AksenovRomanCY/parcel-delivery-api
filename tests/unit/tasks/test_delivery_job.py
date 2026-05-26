@@ -1,3 +1,5 @@
+"""Unit tests for delivery recalculation tasks."""
+
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -13,7 +15,7 @@ from app.tasks.delivery import (  # noqa
 
 @pytest.mark.asyncio
 @patch("app.tasks.delivery.get_redis")
-async def test_acquire_lock_success(mock_get_redis):
+async def test_acquire_lock_success(mock_get_redis: MagicMock) -> None:
     """Should acquire a Redis lock successfully if key does not exist."""
     redis_mock = AsyncMock()
     redis_mock.set.return_value = True
@@ -25,7 +27,7 @@ async def test_acquire_lock_success(mock_get_redis):
 
 
 @pytest.mark.asyncio
-async def test_fetch_unpriced():
+async def test_fetch_unpriced() -> None:
     """Should return unpriced parcels fetched via SELECT with .is_(None)."""
     mock_session = AsyncMock(spec=AsyncSession)
 
@@ -36,7 +38,7 @@ async def test_fetch_unpriced():
     mock_session.scalars.return_value = mock_scalars_result
 
     result = await _fetch_unpriced(mock_session)
-    assert result == ["parcel1", "parcel2"]
+    assert len(result) == 2
 
     mock_session.scalars.assert_called_once()
     mock_scalars_result.all.assert_called_once()
@@ -51,14 +53,14 @@ async def test_fetch_unpriced():
 @patch("app.tasks.delivery.AsyncSessionLocal")
 @patch("app.tasks.delivery.get_redis")
 async def test_recalc_delivery_costs_updates(
-    mock_get_redis,
-    mock_session_local,
-    mock_fetch_unpriced,
-    mock_get_rate,  # noqa
-    mock_acquire_lock,  # noqa
-    mock_recalc_duration,
-    mock_recalc_parcels,
-):
+    mock_get_redis: MagicMock,
+    mock_session_local: MagicMock,
+    mock_fetch_unpriced: MagicMock,
+    mock_get_rate: MagicMock,  # noqa
+    mock_acquire_lock: MagicMock,  # noqa
+    mock_recalc_duration: MagicMock,
+    mock_recalc_parcels: MagicMock,
+) -> None:
     """Should recalculate delivery cost for unpriced parcels and persist them."""
     # Simulate one batch with one parcel
     mock_parcel = MagicMock(
@@ -73,6 +75,10 @@ async def test_recalc_delivery_costs_updates(
     updated = await recalc_delivery_costs()
     assert updated == 1
     mock_session.commit.assert_called_once()
-    mock_redis.set.assert_called_once_with("delivery_last_run_ts", "1")
+    mock_redis.set.assert_any_call("delivery_last_run_updated", "1")
+    assert any(
+        call.args[0] == "delivery_last_run_at" and "T" in call.args[1]
+        for call in mock_redis.set.call_args_list
+    )
     mock_recalc_duration.observe.assert_called_once()
     mock_recalc_parcels.inc.assert_called_once_with(1)

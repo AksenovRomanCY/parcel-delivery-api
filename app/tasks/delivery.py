@@ -1,6 +1,9 @@
+"""Delivery cost recalculation task and Redis run metadata."""
+
 import logging
 import time
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -88,6 +91,8 @@ async def recalc_delivery_costs() -> int:
 
     async with AsyncSessionLocal() as session:
         while parcels := await _fetch_unpriced(session):
+            # Commit per batch to keep transactions small and let another run
+            # resume from the next unpriced batch if this worker is interrupted.
             for parcel in parcels:
                 parcel.delivery_cost_rub = await _formula(
                     parcel.weight_kg,
@@ -100,6 +105,9 @@ async def recalc_delivery_costs() -> int:
     DELIVERY_RECALC_DURATION.observe(time.monotonic() - start)
     DELIVERY_RECALC_PARCELS.inc(updated)
 
-    await get_redis().set("delivery_last_run_ts", str(updated))
+    # Keep machine-readable task metadata in Redis for simple health/debug views.
+    redis = get_redis()
+    await redis.set("delivery_last_run_updated", str(updated))
+    await redis.set("delivery_last_run_at", datetime.now(UTC).isoformat())
     log.info("delivery_job_done: updated=%u, rate=%r", updated, float(rate))
     return updated
