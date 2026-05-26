@@ -1,3 +1,5 @@
+"""Shared pytest fixtures for unit tests."""
+
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -9,7 +11,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 
 @pytest.fixture
-def mock_session():
+def mock_session() -> AsyncMock:
+    """Return an AsyncSession-like mock with common async methods prepared."""
     session = AsyncMock(spec=AsyncSession)
     session.scalar = AsyncMock()
     session.scalars = AsyncMock()

@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import DatabaseError, IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.parcel import Parcel
 
@@ -13,7 +14,9 @@ from app.models.parcel import Parcel
 _check_error = (IntegrityError, DatabaseError)
 
 
-async def test_db_rejects_zero_weight(db_session, parcel_type_id):
+async def test_db_rejects_zero_weight(
+    db_session: AsyncSession, parcel_type_id: str
+) -> None:
     """CHECK constraint should reject weight_kg = 0."""
     parcel = Parcel(
         name="zero-weight",
@@ -27,7 +30,9 @@ async def test_db_rejects_zero_weight(db_session, parcel_type_id):
         await db_session.flush()
 
 
-async def test_db_rejects_negative_weight(db_session, parcel_type_id):
+async def test_db_rejects_negative_weight(
+    db_session: AsyncSession, parcel_type_id: str
+) -> None:
     """CHECK constraint should reject weight_kg < 0."""
     parcel = Parcel(
         name="neg-weight",
@@ -41,7 +46,9 @@ async def test_db_rejects_negative_weight(db_session, parcel_type_id):
         await db_session.flush()
 
 
-async def test_db_rejects_negative_declared_value(db_session, parcel_type_id):
+async def test_db_rejects_negative_declared_value(
+    db_session: AsyncSession, parcel_type_id: str
+) -> None:
     """CHECK constraint should reject declared_value_usd < 0."""
     parcel = Parcel(
         name="neg-value",
@@ -55,7 +62,9 @@ async def test_db_rejects_negative_declared_value(db_session, parcel_type_id):
         await db_session.flush()
 
 
-async def test_db_rejects_negative_delivery_cost(db_session, parcel_type_id):
+async def test_db_rejects_negative_delivery_cost(
+    db_session: AsyncSession, parcel_type_id: str
+) -> None:
     """CHECK constraint should reject delivery_cost_rub < 0."""
     parcel = Parcel(
         name="neg-cost",
@@ -70,7 +79,9 @@ async def test_db_rejects_negative_delivery_cost(db_session, parcel_type_id):
         await db_session.flush()
 
 
-async def test_db_allows_null_delivery_cost(db_session, parcel_type_id):
+async def test_db_allows_null_delivery_cost(
+    db_session: AsyncSession, parcel_type_id: str
+) -> None:
     """NULL delivery_cost_rub should be allowed (not yet calculated)."""
     parcel = Parcel(
         name="null-cost",
@@ -85,7 +96,9 @@ async def test_db_allows_null_delivery_cost(db_session, parcel_type_id):
     assert parcel.id is not None
 
 
-async def test_db_allows_valid_values(db_session, parcel_type_id):
+async def test_db_allows_valid_values(
+    db_session: AsyncSession, parcel_type_id: str
+) -> None:
     """All-valid data should be accepted."""
     parcel = Parcel(
         name="valid",

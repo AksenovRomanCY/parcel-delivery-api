@@ -1,7 +1,12 @@
+"""Integration tests for parcel-type endpoints."""
+
+from httpx import AsyncClient
+
 SEEDED_NAMES = {"clothes", "electronics", "misc"}
 
 
-async def test_list_parcel_types(client):
+async def test_list_parcel_types(client: AsyncClient) -> None:
+    """Parcel-type list should include seeded reference rows."""
     resp = await client.get("/parcel-types")
     assert resp.status_code == 200
     data = resp.json()
@@ -9,7 +14,8 @@ async def test_list_parcel_types(client):
     assert SEEDED_NAMES.issubset(names)
 
 
-async def test_parcel_types_pagination(client):
+async def test_parcel_types_pagination(client: AsyncClient) -> None:
+    """Parcel-type list should support pagination."""
     resp = await client.get("/parcel-types?limit=1&offset=0")
     assert resp.status_code == 200
     data = resp.json()
@@ -18,7 +24,8 @@ async def test_parcel_types_pagination(client):
     assert data["limit"] == 1
 
 
-async def test_parcel_type_structure(client):
+async def test_parcel_type_structure(client: AsyncClient) -> None:
+    """Parcel-type items should expose only public fields."""
     resp = await client.get("/parcel-types")
     assert resp.status_code == 200
     for item in resp.json()["items"]:

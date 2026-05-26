@@ -1,6 +1,8 @@
+"""Unit tests for the USD/RUB rate fetcher."""
+
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -14,7 +16,8 @@ from app.services.rates import (  # noqa
 
 @pytest.mark.asyncio
 @patch("app.services.rates.get_redis")
-async def test_get_usd_rub_rate_from_cache(mock_get_redis):
+async def test_get_usd_rub_rate_from_cache(mock_get_redis: MagicMock) -> None:
+    """USD/RUB rate should be returned from Redis cache when available."""
     mock_redis = AsyncMock()
     mock_redis.get.return_value = b"89.1234"
     mock_get_redis.return_value = mock_redis
@@ -28,7 +31,11 @@ async def test_get_usd_rub_rate_from_cache(mock_get_redis):
 @pytest.mark.asyncio
 @patch("app.services.rates.get_redis")
 @patch("app.services.rates._fetch_rate_from_cbr")
-async def test_get_usd_rub_rate_fetch_and_cache(mock_fetch, mock_get_redis):
+async def test_get_usd_rub_rate_fetch_and_cache(
+    mock_fetch: MagicMock,
+    mock_get_redis: MagicMock,
+) -> None:
+    """USD/RUB rate should be fetched and cached when Redis misses."""
     mock_redis = AsyncMock()
     mock_redis.get.return_value = None
     mock_get_redis.return_value = mock_redis
@@ -46,12 +53,16 @@ async def test_get_usd_rub_rate_fetch_and_cache(mock_fetch, mock_get_redis):
 
 @pytest.mark.asyncio
 @patch("httpx.AsyncClient.get")
-async def test_fetch_rate_from_cbr_success(mock_http_get):
+async def test_fetch_rate_from_cbr_success(mock_http_get: MagicMock) -> None:
+    """CBR response should be parsed into Decimal."""
+
     class MockResponse:
-        def raise_for_status(self):
+        """Minimal httpx response double for a successful CBR call."""
+
+        def raise_for_status(self) -> None:
             pass
 
-        def json(self):
+        def json(self) -> dict[str, dict[str, dict[str, float]]]:
             return {"Valute": {"USD": {"Value": 92.3456}}}
 
     mock_http_get.return_value = MockResponse()
@@ -63,7 +74,8 @@ async def test_fetch_rate_from_cbr_success(mock_http_get):
 
 @pytest.mark.asyncio
 @patch("httpx.AsyncClient.get")
-async def test_fetch_rate_from_cbr_http_error(mock_http_get):
+async def test_fetch_rate_from_cbr_http_error(mock_http_get: MagicMock) -> None:
+    """CBR HTTP errors should be propagated after retries fail."""
     from httpx import HTTPStatusError, Request, Response
 
     mock_response = Response(status_code=500, request=Request("GET", CBR_URL))

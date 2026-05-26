@@ -8,7 +8,7 @@ from app.redis_client import client as redis_module
 
 
 @pytest.mark.asyncio
-async def test_close_redis_resets_singleton():
+async def test_close_redis_resets_singleton() -> None:
     """close_redis should close the connection and reset _redis to None."""
     mock_redis = AsyncMock()
     redis_module._redis = mock_redis
@@ -20,7 +20,7 @@ async def test_close_redis_resets_singleton():
 
 
 @pytest.mark.asyncio
-async def test_close_redis_when_none():
+async def test_close_redis_when_none() -> None:
     """close_redis should not raise when _redis is already None."""
     redis_module._redis = None
     await redis_module.close_redis()  # should not raise

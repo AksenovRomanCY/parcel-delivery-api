@@ -1,13 +1,16 @@
 """Unit tests for Sentry initialization helper."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app.core.sentry import init_sentry
 
 
 @patch("app.core.sentry.sentry_sdk")
 @patch("app.core.sentry.settings")
-def test_init_sentry_noop_when_dsn_empty(mock_settings, mock_sentry_sdk):
+def test_init_sentry_noop_when_dsn_empty(
+    mock_settings: MagicMock,
+    mock_sentry_sdk: MagicMock,
+) -> None:
     """Should not call sentry_sdk.init when DSN is empty."""
     mock_settings.SENTRY_DSN = ""
     init_sentry()
@@ -16,7 +19,10 @@ def test_init_sentry_noop_when_dsn_empty(mock_settings, mock_sentry_sdk):
 
 @patch("app.core.sentry.sentry_sdk")
 @patch("app.core.sentry.settings")
-def test_init_sentry_calls_init_when_dsn_set(mock_settings, mock_sentry_sdk):
+def test_init_sentry_calls_init_when_dsn_set(
+    mock_settings: MagicMock,
+    mock_sentry_sdk: MagicMock,
+) -> None:
     """Should call sentry_sdk.init with correct params when DSN is provided."""
     mock_settings.SENTRY_DSN = "https://key@sentry.io/0"
     mock_settings.SENTRY_TRACES_SAMPLE_RATE = 0.2
@@ -34,7 +40,10 @@ def test_init_sentry_calls_init_when_dsn_set(mock_settings, mock_sentry_sdk):
 
 @patch("app.core.sentry.sentry_sdk")
 @patch("app.core.sentry.settings")
-def test_init_sentry_default_release(mock_settings, mock_sentry_sdk):
+def test_init_sentry_default_release(
+    mock_settings: MagicMock,
+    mock_sentry_sdk: MagicMock,
+) -> None:
     """Should use '1.0.0' as default release."""
     mock_settings.SENTRY_DSN = "https://key@sentry.io/0"
     mock_settings.SENTRY_TRACES_SAMPLE_RATE = 0.1

@@ -9,17 +9,21 @@ from app.core.metrics import (
 )
 
 
-def test_parcels_created_is_counter():
+def test_parcels_created_is_counter() -> None:
+    """PARCELS_CREATED should be a Prometheus counter."""
     assert isinstance(PARCELS_CREATED, Counter)
 
 
-def test_delivery_recalc_duration_is_histogram():
+def test_delivery_recalc_duration_is_histogram() -> None:
+    """DELIVERY_RECALC_DURATION should be a Prometheus histogram."""
     assert isinstance(DELIVERY_RECALC_DURATION, Histogram)
 
 
-def test_delivery_recalc_parcels_is_counter():
+def test_delivery_recalc_parcels_is_counter() -> None:
+    """DELIVERY_RECALC_PARCELS should be a Prometheus counter."""
     assert isinstance(DELIVERY_RECALC_PARCELS, Counter)
 
 
-def test_parcels_created_accepts_parcel_type_label():
+def test_parcels_created_accepts_parcel_type_label() -> None:
+    """PARCELS_CREATED should accept the parcel_type label."""
     PARCELS_CREATED.labels(parcel_type="test-type").inc()

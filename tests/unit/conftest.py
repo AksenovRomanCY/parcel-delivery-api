@@ -1,3 +1,5 @@
+"""Shared fixtures for unit test modules."""
+
 import pytest
 
 _unit_marker = pytest.mark.unit
