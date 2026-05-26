@@ -5,6 +5,7 @@ because ``app.core.settings.Settings()`` is evaluated at import time.
 """
 
 import os
+import socket
 
 os.environ.setdefault("DB_HOST", "127.0.0.1")
 os.environ.setdefault("DB_PORT", "3306")
@@ -17,13 +18,65 @@ os.environ.setdefault("REDIS_PASS", "")
 
 import asyncio
 import subprocess
+from collections.abc import AsyncIterator, Iterator
+from typing import cast
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from redis import Redis
+from redis.exceptions import RedisError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 _integration_marker = pytest.mark.integration
+
+
+def _strict_integration_mode() -> bool:
+    return os.getenv("CI") == "true" or os.getenv("REQUIRE_INTEGRATION_SERVICES") == "1"
+
+
+def _handle_missing_service(message: str) -> None:
+    if _strict_integration_mode():
+        pytest.fail(message)
+    pytest.skip(message)
+
+
+def _ensure_integration_services_available() -> None:
+    db_host = os.environ["DB_HOST"]
+    db_port = int(os.environ["DB_PORT"])
+    redis_host = os.environ["REDIS_HOST"]
+    redis_port = int(os.environ["REDIS_PORT"])
+    redis_password = os.environ.get("REDIS_PASS") or None
+
+    try:
+        with socket.create_connection((db_host, db_port), timeout=1):
+            pass
+    except OSError as exc:
+        _handle_missing_service(
+            "Integration tests require MySQL at "
+            f"{db_host}:{db_port}. Start test services or run only tests/unit/. "
+            f"Original error: {exc}"
+        )
+
+    redis = Redis(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        socket_connect_timeout=1,
+        socket_timeout=1,
+        decode_responses=True,
+    )
+    try:
+        redis.ping()
+    except RedisError as exc:
+        _handle_missing_service(
+            "Integration tests require Redis at "
+            f"{redis_host}:{redis_port}. Start test services or run only tests/unit/. "
+            f"Original error: {exc}"
+        )
+    finally:
+        redis.close()
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -34,7 +87,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
 
 @pytest.fixture(scope="session")
-def event_loop():
+def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
     """Create a single event loop shared by all integration tests and fixtures.
 
     This prevents event-loop mismatch when module-level singletons
@@ -48,8 +101,10 @@ def event_loop():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _run_migrations():
+def _run_migrations() -> None:
     """Run alembic migrations once before all integration tests."""
+    _ensure_integration_services_available()
+
     result = subprocess.run(
         ["alembic", "upgrade", "head"],
         capture_output=True,
@@ -60,7 +115,7 @@ def _run_migrations():
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def _flush_stores():
+async def _flush_stores() -> None:
     """Flush Redis and clean user/parcel tables before each test."""
     from redis.asyncio import Redis
 
@@ -84,7 +139,7 @@ async def _flush_stores():
 
 
 @pytest_asyncio.fixture
-async def client():
+async def client() -> AsyncIterator[AsyncClient]:
     """Async HTTP client wired to the FastAPI ASGI app."""
     from app.main import app
 
@@ -99,6 +154,20 @@ def session_id() -> str:
     return str(uuid4())
 
 
+@pytest.fixture
+def enable_task_admin_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Enable the manual task endpoint for tests that exercise it."""
+    from app.core.settings import settings
+
+    monkeypatch.setattr(settings, "TASK_ADMIN_TOKEN", "test-admin-token")
+
+
+@pytest.fixture
+def admin_headers(enable_task_admin_token: None) -> dict[str, str]:
+    """Headers required by operational task endpoints."""
+    return {"X-Admin-Token": "test-admin-token"}
+
+
 @pytest_asyncio.fixture
 async def parcel_type_id(client: AsyncClient) -> str:
     """First parcel-type ID from the seeded database."""
@@ -106,11 +175,11 @@ async def parcel_type_id(client: AsyncClient) -> str:
     assert resp.status_code == 200
     items = resp.json()["items"]
     assert len(items) > 0
-    return items[0]["id"]
+    return cast(str, items[0]["id"])
 
 
 @pytest_asyncio.fixture
-async def db_session():
+async def db_session() -> AsyncIterator[AsyncSession]:
     """Direct async DB session for constraint/model-level tests."""
     from app.db.session import AsyncSessionLocal
 
