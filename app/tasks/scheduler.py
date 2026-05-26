@@ -1,3 +1,5 @@
+"""APScheduler lifecycle wiring for recurring background tasks."""
+
 from asyncio import AbstractEventLoop
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -10,7 +12,7 @@ def init_scheduler(loop: AbstractEventLoop) -> AsyncIOScheduler:
     """Initialize and configure the APScheduler with a recurring job.
 
     Binds the scheduler to the provided asyncio event loop and schedules
-    the ``recalc_delivery_costs`` task to run every 5 minutes.
+    the ``recalc_delivery_costs`` task according to DELIVERY_JOB_INTERVAL_MIN.
 
     Args:
         loop: AsyncIO event loop that will drive scheduled job execution.

@@ -1,3 +1,5 @@
+"""Business logic for parcel type lookup and pagination."""
+
 from sqlalchemy import func, select
 
 from app.models.parcel_type import ParcelType

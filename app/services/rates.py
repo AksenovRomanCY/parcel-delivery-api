@@ -1,4 +1,4 @@
-"""Getting and caching USD→RUB rate."""
+"""Fetch and cache the USD/RUB exchange rate used by delivery pricing."""
 
 import logging
 from datetime import UTC, datetime
@@ -19,7 +19,11 @@ KEY_TMPL: Final[str] = "usd_rub:{date}"
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), reraise=True)
 async def _fetch_rate_from_cbr() -> Decimal:
-    """Go to an external service (up to 3 attempts) and return the Decimal rate."""
+    """Fetch the current USD/RUB rate from the Central Bank mirror.
+
+    Tenacity retries transient network failures; the caller decides how to
+    handle a final failure after all attempts are exhausted.
+    """
     async with httpx.AsyncClient(timeout=5) as client:
         resp = await client.get(CBR_URL)
         resp.raise_for_status()
@@ -28,12 +32,13 @@ async def _fetch_rate_from_cbr() -> Decimal:
 
 
 async def get_usd_rub_rate() -> Decimal:
+    """Return today's USD/RUB rate, cached in Redis by date."""
     redis = get_redis()
     today = datetime.now(UTC).date().isoformat()
     key = KEY_TMPL.format(date=today)
 
     if (cached := await redis.get(key)) is not None:
-        raw = cached.decode() if isinstance(cached, (bytes, bytearray)) else cached
+        raw = cached.decode() if isinstance(cached, bytes | bytearray) else cached
         return Decimal(raw)
 
     rate = await _fetch_rate_from_cbr()

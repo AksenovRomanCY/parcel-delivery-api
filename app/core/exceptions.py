@@ -1,13 +1,16 @@
+"""Domain exceptions mapped to stable HTTP error responses."""
+
+
 class BusinessError(ValueError):
-    """Business logic errors that should be given to the c HTTP 400 client."""
+    """Business rule violation that should be returned as HTTP 400."""
 
 
 class NotFoundError(ValueError):
-    """Exception “record isn't found” → HTTP 404."""
+    """Record is missing or intentionally hidden from the caller → HTTP 404."""
 
 
 class UnauthorizedError(ValueError):
-    """Missing or invalid session ID → HTTP 401."""
+    """Missing or invalid credentials/session identifier → HTTP 401."""
 
 
 class ForbiddenError(ValueError):

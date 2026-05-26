@@ -50,6 +50,7 @@ def _error_response(
 
 
 async def internal_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Handle unexpected exceptions without leaking internal details."""
     return _error_response(
         "internal_error", "Unexpected server error", None, status=500, exc=exc
     )
@@ -58,7 +59,9 @@ async def internal_error_handler(_request: Request, exc: Exception) -> JSONRespo
 async def validation_exception_handler(
     _request: Request, exc: Exception
 ) -> JSONResponse:
-    assert isinstance(exc, RequestValidationError)
+    """Handle FastAPI request validation errors with the shared error envelope."""
+    if not isinstance(exc, RequestValidationError):
+        return await internal_error_handler(_request, exc)
     return _error_response(
         "validation_error",
         "Payload validation failed",
@@ -68,18 +71,22 @@ async def validation_exception_handler(
 
 
 async def business_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Convert domain validation failures to HTTP 400 responses."""
     return _error_response("business_error", str(exc), None, status=400)
 
 
 async def not_found_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Convert missing domain resources to HTTP 404 responses."""
     return _error_response("not_found", str(exc), None, status=404)
 
 
 async def unauthorized_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Convert authentication failures to HTTP 401 responses."""
     return _error_response("unauthorized", str(exc), None, status=401)
 
 
 async def forbidden_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Convert authorization failures to HTTP 403 responses."""
     return _error_response("forbidden", str(exc), None, status=403)
 
 

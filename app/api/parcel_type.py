@@ -24,12 +24,16 @@ router = APIRouter(prefix="/parcel-types", tags=["parcel-types"])
     status_code=status.HTTP_200_OK,
 )
 @limiter.limit(settings.RATE_LIMIT_PARCEL_TYPES)
-@redis_cache("parcel_types", ttl=60, key_func=make_cache_key_no_session)
+@redis_cache(
+    "parcel_types",
+    ttl=settings.CACHE_TTL_DEFAULT,
+    key_func=make_cache_key_no_session,
+)
 async def list_parcel_types(
     request: Request,
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
-):
+) -> PaginatedResponse[ParcelTypeRead]:
     """Return a paginated list of all available parcel types."""
     svc = ParcelTypeService(db)
 

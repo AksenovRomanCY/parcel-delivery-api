@@ -1,8 +1,8 @@
 """Redis-based request caching for FastAPI handlers.
 
 Provides decorators and utilities to cache JSON-serializable responses
-based on request URL and session context. Designed for GET-like idempotent
-endpoints where response is predictable and not sensitive to timing.
+based on request URL and caller identity. Designed for GET-like idempotent
+endpoints whose results can tolerate short TTL-based staleness.
 
 Usage:
 @router.get("/resource")
@@ -13,9 +13,9 @@ async def get_resource(request: Request):
 
 import hashlib
 import json
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Any
+from typing import ParamSpec, TypeVar, cast
 
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
@@ -25,15 +25,24 @@ from app.core.settings import settings
 from app.redis_client import get_redis
 
 SESSION_HEADER = "X-Session-Id"
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def make_cache_key(prefix: str, request: Request, *_, **__) -> str:
+def make_cache_key(
+    prefix: str,
+    request: Request,
+    *args: object,
+    **kwargs: object,
+) -> str:
     """Build an identity-aware cache key from request metadata.
 
     Uses Authorization header (JWT mode) or X-Session-Id (session mode)
     as the identity component, along with path and query string.
     """
     if settings.AUTH_REQUIRED:
+        # Do not store raw bearer tokens in Redis keys. A short hash is enough
+        # to separate users while keeping keys non-sensitive.
         auth_header = request.headers.get("Authorization", "anon")
         identity = hashlib.sha256(auth_header.encode()).hexdigest()[:16]
     else:
@@ -51,7 +60,12 @@ def make_cache_key(prefix: str, request: Request, *_, **__) -> str:
     return f"{prefix}:{digest}"
 
 
-def make_cache_key_no_session(prefix: str, request: Request, *_, **__) -> str:
+def make_cache_key_no_session(
+    prefix: str,
+    request: Request,
+    *args: object,
+    **kwargs: object,
+) -> str:
     """Build a global (non-session-bound) cache key.
 
     Suitable for caching public GET responses where response does not
@@ -60,6 +74,8 @@ def make_cache_key_no_session(prefix: str, request: Request, *_, **__) -> str:
     Args:
         prefix: Namespace prefix to scope cache keys.
         request: FastAPI request object.
+        *args: Extra handler arguments accepted for decorator compatibility.
+        **kwargs: Extra handler keyword arguments accepted for compatibility.
 
     Returns:
         str: SHA256-based Redis key scoped by path and query string.
@@ -79,7 +95,7 @@ def redis_cache(
     prefix: str,
     ttl: int = 60,
     key_func: Callable[..., str] = make_cache_key,
-):
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """Decorator for caching FastAPI handler results in Redis.
 
     Args:
@@ -91,18 +107,21 @@ def redis_cache(
         Callable: A decorator that wraps an async handler function.
     """
 
-    def decorator(fn: Callable[..., Coroutine[Any, Any, Any]]):
+    def decorator(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(fn)
-        async def wrapper(request: Request, *args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             redis: Redis = get_redis()
+            request = cast(Request, args[0] if args else kwargs["request"])
 
             key = key_func(prefix, request, *args, **kwargs)
             cached = await redis.get(key)
             if cached:
-                return json.loads(cached)
+                return cast(R, json.loads(cached))
 
-            result = await fn(request, *args, **kwargs)
+            result = await fn(*args, **kwargs)
 
+            # FastAPI may return Pydantic models, ORM-backed response models, or
+            # plain dicts. jsonable_encoder normalizes all of them before caching.
             serializable = jsonable_encoder(result)
             await redis.set(
                 key,

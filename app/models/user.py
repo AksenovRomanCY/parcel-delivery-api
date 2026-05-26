@@ -1,3 +1,5 @@
+"""User ORM model for JWT authentication mode."""
+
 from datetime import UTC, datetime
 from uuid import uuid4
 

@@ -1,3 +1,5 @@
+"""Business logic for parcel creation, ownership checks, and status updates."""
+
 import logging
 from decimal import Decimal
 
@@ -16,7 +18,11 @@ log = logging.getLogger(__name__)
 
 
 class ParcelService(CRUDBase[Parcel]):
-    """Business-logic facade for CRUD operations on ``Parcel``."""
+    """Business-logic facade for CRUD operations on ``Parcel``.
+
+    Route handlers pass an `owner_id` without knowing how it was derived. This
+    service maps it onto either `session_id` or `user_id` based on AUTH_REQUIRED.
+    """
 
     model = Parcel
 
@@ -40,6 +46,8 @@ class ParcelService(CRUDBase[Parcel]):
         if data.weight_kg <= 0:
             raise BusinessError("Weight must be positive")
 
+        # Keep both ownership modes in one creation path so API handlers do not
+        # duplicate session/JWT branching.
         parcel = Parcel(
             name=data.name,
             weight_kg=data.weight_kg,
@@ -96,6 +104,7 @@ class ParcelService(CRUDBase[Parcel]):
         offset: int,
     ) -> tuple[int, list[Parcel]]:
         """Return a page of parcels owned by the caller, with optional filters."""
+        # Build ownership predicates first; optional filters are added below.
         if settings.AUTH_REQUIRED:
             conditions = [Parcel.user_id == owner_id]
         else:

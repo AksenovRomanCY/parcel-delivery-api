@@ -1,3 +1,5 @@
+"""Reusable SQLAlchemy query helpers for service classes."""
+
 from collections.abc import Iterable
 from typing import Generic, TypeVar
 
@@ -67,7 +69,7 @@ class CRUDBase(Generic[ModelT]):
         """
         return await self.session.get(self.model, id_)
 
-    async def list(self, *filters: InstrumentedAttribute) -> Iterable[ModelT]:
+    async def list(self, *filters: InstrumentedAttribute[bool]) -> Iterable[ModelT]:
         """Fetch all rows that satisfy the given SQLAlchemy filter clauses.
 
         Args:

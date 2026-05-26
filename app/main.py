@@ -1,9 +1,11 @@
-"""Main FastAPI application entry point.
+"""FastAPI application composition root.
 
-Initializes logging, middleware, routers, and OpenAPI configuration
-for the Parcel Delivery API.
+This is the best starting point for a newcomer reading the runtime wiring:
+logging/Sentry, app lifespan, metrics, exception handlers, rate limiting,
+authentication mode, OpenAPI schema, and routers are all connected here.
 """
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -22,19 +24,25 @@ from app.middlewares.session import assign_session_id
 from app.redis_client import close_redis
 from app.tasks.routes import router as task_router
 
-# Initialize structured logging and Sentry error tracking.
+# Initialize process-wide integrations before the app starts accepting requests.
+# Sentry is a no-op unless SENTRY_DSN is configured.
 setup_logging()
 init_sentry(release="0.1.0")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan: clean up Redis on shutdown."""
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan hook.
+
+    Redis is a lazy singleton shared by cache, rate lookup, and task code. Closing
+    it here prevents dangling connections when Uvicorn workers are stopped.
+    """
     yield
     await close_redis()
 
 
-# Create the FastAPI instance with metadata and custom OpenAPI paths.
+# App metadata and docs endpoints. ReDoc is intentionally disabled so Swagger UI
+# remains the single interactive entry point for local exploration.
 app = FastAPI(
     title="Parcel-Delivery-API",
     version="0.1.0",
@@ -44,32 +52,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Prometheus metrics instrumentation.
+# HTTP-level Prometheus metrics. The instrumentator reads ENABLE_METRICS, so the
+# /metrics endpoint can be disabled per environment without code changes.
 Instrumentator(
     should_group_status_codes=True,
     should_respect_env_var=True,
     env_var_name="ENABLE_METRICS",
 ).instrument(app).expose(app, endpoint="/metrics")
 
-# Register custom exception handlers for structured error responses.
+# Convert domain exceptions and validation errors into a consistent JSON shape.
 register_exception_handlers(app)
 
-# Rate limiting via slowapi.
+# slowapi stores counters in Redis DB 1. Endpoint-specific limits are attached
+# on routers, while RATE_LIMIT_DEFAULT is a fallback for routes without one.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
-# OpenAPI schema file
+# Advertise either Bearer JWT auth or legacy X-Session-Id in Swagger.
 setup_custom_openapi(app)
 
-# Register HTTP middleware for assigning session IDs (legacy mode).
+# Legacy anonymous mode: callers are identified by X-Session-Id. When
+# AUTH_REQUIRED=True, parcel ownership moves to JWT user_id and this middleware
+# is not installed.
 if not settings.AUTH_REQUIRED:
     app.middleware("http")(assign_session_id)
 
-# Mount modular routers for all API groups.
+# Mount routers from narrow domains. Keep route-level concerns inside app/api/*
+# and business rules inside app/services/*.
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(parcel_type_router)
 app.include_router(parcel_router)
 
-# Debug-roots to run background tasks manually.
+# Operational endpoint for manually triggering the delivery-cost recalculation.
 app.include_router(task_router)

@@ -1,3 +1,5 @@
+"""Parcel ORM model."""
+
 from decimal import Decimal
 from uuid import uuid4
 
@@ -11,9 +13,10 @@ from app.models.parcel_type import ParcelType
 class Parcel(Base):
     """Parcel model representing a physical shipment unit.
 
-    Stores weight, declared value, and session ownership. The delivery
-    cost is computed asynchronously after creation. Each parcel is
-    associated with a parcel type (e.g., "clothes", "electronics").
+    Stores weight, declared value, async delivery cost, and ownership. Ownership
+    is dual-mode during the auth migration:
+    - legacy anonymous mode uses `session_id`;
+    - JWT mode uses nullable `user_id`.
     """
 
     __tablename__ = "parcel"
@@ -48,6 +51,8 @@ class Parcel(Base):
         nullable=False,
     )
 
+    # Kept non-null for backward compatibility with anonymous sessions. In
+    # AUTH_REQUIRED mode the service writes an empty string and relies on user_id.
     session_id: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
@@ -64,6 +69,8 @@ class Parcel(Base):
         nullable=False,
     )
 
+    # Nullable so existing anonymous parcels remain valid and deployments can
+    # switch AUTH_REQUIRED on gradually.
     user_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("user.id"),

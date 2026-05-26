@@ -1,3 +1,5 @@
+"""HTTP route modules exposed by the FastAPI application."""
+
 from .auth import router as auth_router
 from .health import router as health_router
 from .parcel import router as parcel_router

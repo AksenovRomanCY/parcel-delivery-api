@@ -13,7 +13,10 @@ log = logging.getLogger(__name__)
 
 
 class AuthService:
+    """Coordinate user registration, password checks, and token issuance."""
+
     def __init__(self, session: AsyncSession) -> None:
+        """Create the service with a request-scoped database session."""
         self.session = session
 
     async def register(self, email: str, password: str) -> tuple[User, str]:

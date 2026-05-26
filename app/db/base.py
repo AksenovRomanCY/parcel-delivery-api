@@ -1,3 +1,5 @@
+"""SQLAlchemy declarative base shared by all ORM models."""
+
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase
 

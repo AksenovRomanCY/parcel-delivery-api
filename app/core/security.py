@@ -1,6 +1,7 @@
 """JWT token management and password hashing utilities."""
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import bcrypt
 from jose import JWTError, jwt
@@ -32,7 +33,7 @@ def create_access_token(subject: str) -> str:
 def decode_token(token: str) -> str | None:
     """Decode a JWT token and return the subject claim, or None if invalid."""
     try:
-        payload: dict = jwt.decode(  # type: ignore[assignment]
+        payload: dict[str, Any] = jwt.decode(
             token,
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],

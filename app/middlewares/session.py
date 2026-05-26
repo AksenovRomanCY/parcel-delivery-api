@@ -6,6 +6,7 @@ the request state and propagated back in the response headers.
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from uuid import UUID, uuid4
 
 from fastapi import Request, Response
@@ -15,7 +16,10 @@ SESSION_HEADER = "X-Session-Id"
 log = logging.getLogger(__name__)
 
 
-async def assign_session_id(request: Request, call_next):
+async def assign_session_id(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     """Attach a session ID to the request and propagate it in the response.
 
     The middleware checks for an existing ``X-Session-Id`` header.
