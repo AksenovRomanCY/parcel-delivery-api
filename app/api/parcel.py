@@ -1,3 +1,5 @@
+"""Parcel API endpoints for creation, listing, detail, and status updates."""
+
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -9,10 +11,12 @@ from app.core.exceptions import NotFoundError, UnauthorizedError
 from app.core.rate_limit import limiter
 from app.core.settings import settings
 from app.db.deps import get_db
+from app.models.parcel import Parcel
 from app.schemas import (
     PaginatedResponse,
     PaginationParams,
     ParcelCreate,
+    ParcelCreateResponse,
     ParcelFilterParams,
     ParcelRead,
 )
@@ -23,11 +27,12 @@ router = APIRouter(prefix="/parcels", tags=["parcels"])
 log = logging.getLogger(__name__)
 
 
-# POST /parcels
+# Create a parcel for the current owner. `owner_id` abstracts over two modes:
+# legacy X-Session-Id and JWT user_id, see app/api/deps.py.
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    response_model=dict[str, str],
+    response_model=ParcelCreateResponse,
 )
 @limiter.limit(settings.RATE_LIMIT_CREATE)
 async def register_parcel(
@@ -35,28 +40,29 @@ async def register_parcel(
     body: ParcelCreate,
     db: AsyncSession = Depends(get_db),
     owner_id: str = Depends(get_owner_id),
-):
+) -> ParcelCreateResponse:
     """Register a new parcel and persist it to the database."""
     log.info("api_register_parcel_called: owner_id=%s", owner_id)
     parcel = await ParcelService(db).create_from_dto(body, owner_id)
-    return {"id": parcel.id, "session_id": owner_id}
+    return ParcelCreateResponse(id=parcel.id, owner_id=owner_id)
 
 
-# GET /parcels
+# List responses are cached per owner and query string. The short TTL keeps
+# polling cheap while allowing background delivery-cost updates to appear soon.
 @router.get(
     "",
     response_model=PaginatedResponse[ParcelRead],
     status_code=status.HTTP_200_OK,
 )
 @limiter.limit(settings.RATE_LIMIT_LIST)
-@redis_cache("parcel_types", ttl=60)
+@redis_cache("parcels", ttl=settings.CACHE_TTL_DEFAULT)
 async def list_parcels(
     request: Request,
     pagination: PaginationParams = Depends(),
     filters: ParcelFilterParams = Depends(),
     db: AsyncSession = Depends(get_db),
     owner_id: str = Depends(get_owner_id),
-):
+) -> PaginatedResponse[ParcelRead]:
     """List parcels belonging to the current user/session, with optional filters."""
     total, rows = await ParcelService(db).list_owned(
         owner_id=owner_id,
@@ -72,20 +78,20 @@ async def list_parcels(
     )
 
 
-# GET /parcels/{id}
+# Single-parcel reads use the same owner-aware cache key as list reads.
 @router.get(
     "/{parcel_id}",
     response_model=ParcelRead,
     status_code=status.HTTP_200_OK,
 )
 @limiter.limit(settings.RATE_LIMIT_DETAIL)
-@redis_cache("parcel_types", ttl=60)
+@redis_cache("parcel", ttl=settings.CACHE_TTL_DEFAULT)
 async def get_parcel(
     request: Request,
     parcel_id: str,
     db: AsyncSession = Depends(get_db),
     owner_id: str = Depends(get_owner_id),
-):
+) -> Parcel:
     """Retrieve a single parcel by ID, ensuring it belongs to the caller."""
     log.info("api_get_parcel_called: parcel_id=%s owner_id=%s", parcel_id, owner_id)
     try:

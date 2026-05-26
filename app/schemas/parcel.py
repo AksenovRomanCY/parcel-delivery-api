@@ -36,6 +36,17 @@ class ParcelCreate(ParcelBase):
     pass
 
 
+class ParcelCreateResponse(BaseModel):
+    """Response returned after parcel registration.
+
+    `owner_id` is the caller identity used by the service: session ID in legacy
+    mode and user ID in JWT mode.
+    """
+
+    id: str
+    owner_id: str
+
+
 class ParcelRead(BaseModel):
     """Response schema when returning a single parcel or a list item."""
 

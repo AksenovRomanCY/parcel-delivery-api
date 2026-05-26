@@ -1,11 +1,15 @@
+"""Integration tests for parcel endpoints."""
+
 from uuid import uuid4
+
+from httpx import AsyncClient
 
 SESSION_HEADER = "X-Session-Id"
 
 
-def _parcel_body(parcel_type_id: str, **overrides) -> dict:
+def _parcel_body(parcel_type_id: str, **overrides: object) -> dict[str, object]:
     """Build a valid parcel creation payload (camelCase)."""
-    base = {
+    base: dict[str, object] = {
         "name": "Test Parcel",
         "weightKg": "1.500",
         "declaredValueUsd": "100.00",
@@ -15,7 +19,10 @@ def _parcel_body(parcel_type_id: str, **overrides) -> dict:
     return base
 
 
-async def test_create_parcel(client, session_id, parcel_type_id):
+async def test_create_parcel(
+    client: AsyncClient, session_id: str, parcel_type_id: str
+) -> None:
+    """Parcel creation should return an ID and the effective owner ID."""
     resp = await client.post(
         "/parcels",
         json=_parcel_body(parcel_type_id),
@@ -24,10 +31,11 @@ async def test_create_parcel(client, session_id, parcel_type_id):
     assert resp.status_code == 201
     data = resp.json()
     assert "id" in data
-    assert data["session_id"] == session_id
+    assert data["owner_id"] == session_id
 
 
-async def test_create_parcel_empty_body(client, session_id):
+async def test_create_parcel_empty_body(client: AsyncClient, session_id: str) -> None:
+    """Parcel creation should validate required body fields."""
     resp = await client.post(
         "/parcels",
         json={},
@@ -36,7 +44,8 @@ async def test_create_parcel_empty_body(client, session_id):
     assert resp.status_code == 422
 
 
-async def test_create_parcel_invalid_type(client, session_id):
+async def test_create_parcel_invalid_type(client: AsyncClient, session_id: str) -> None:
+    """Parcel creation should reject unknown parcel types."""
     resp = await client.post(
         "/parcels",
         json=_parcel_body(str(uuid4())),
@@ -48,7 +57,10 @@ async def test_create_parcel_invalid_type(client, session_id):
     assert "Unknown parcel type" in data["message"]
 
 
-async def test_create_parcel_negative_weight(client, session_id, parcel_type_id):
+async def test_create_parcel_negative_weight(
+    client: AsyncClient, session_id: str, parcel_type_id: str
+) -> None:
+    """Parcel creation should reject negative weight."""
     resp = await client.post(
         "/parcels",
         json=_parcel_body(parcel_type_id, weightKg="-1"),
@@ -57,7 +69,10 @@ async def test_create_parcel_negative_weight(client, session_id, parcel_type_id)
     assert resp.status_code == 422
 
 
-async def test_list_own_parcels(client, session_id, parcel_type_id):
+async def test_list_own_parcels(
+    client: AsyncClient, session_id: str, parcel_type_id: str
+) -> None:
+    """Parcel list should return parcels owned by the active session."""
     # Create a parcel first
     create_resp = await client.post(
         "/parcels",
@@ -78,7 +93,10 @@ async def test_list_own_parcels(client, session_id, parcel_type_id):
     assert create_resp.json()["id"] in ids
 
 
-async def test_list_parcels_pagination(client, session_id, parcel_type_id):
+async def test_list_parcels_pagination(
+    client: AsyncClient, session_id: str, parcel_type_id: str
+) -> None:
+    """Parcel list should honor limit and offset."""
     # Create 2 parcels
     for _ in range(2):
         resp = await client.post(
@@ -101,7 +119,10 @@ async def test_list_parcels_pagination(client, session_id, parcel_type_id):
     assert data["offset"] == 0
 
 
-async def test_get_parcel_by_id(client, session_id, parcel_type_id):
+async def test_get_parcel_by_id(
+    client: AsyncClient, session_id: str, parcel_type_id: str
+) -> None:
+    """Parcel detail should return an owned parcel by ID."""
     create_resp = await client.post(
         "/parcels",
         json=_parcel_body(parcel_type_id, name="Specific Parcel"),
@@ -119,7 +140,10 @@ async def test_get_parcel_by_id(client, session_id, parcel_type_id):
     assert data["name"] == "Specific Parcel"
 
 
-async def test_get_parcel_forbidden_other_session(client, session_id, parcel_type_id):
+async def test_get_parcel_forbidden_other_session(
+    client: AsyncClient, session_id: str, parcel_type_id: str
+) -> None:
+    """Parcel detail should reject access from another session."""
     # Create with session A
     create_resp = await client.post(
         "/parcels",
@@ -138,7 +162,8 @@ async def test_get_parcel_forbidden_other_session(client, session_id, parcel_typ
     assert get_resp.json()["detail"] == "Forbidden"
 
 
-async def test_get_parcel_not_found(client, session_id):
+async def test_get_parcel_not_found(client: AsyncClient, session_id: str) -> None:
+    """Parcel detail should return 404 for a missing parcel."""
     resp = await client.get(
         f"/parcels/{uuid4()}",
         headers={SESSION_HEADER: session_id},
