@@ -6,15 +6,18 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+  - repo: local
     hooks:
       - id: mypy
-        additional_dependencies:
-          - pydantic>=2.11.5
-          - pydantic-settings>=2.9.1
-          - types-redis
-        args: [--config-file=pyproject.toml]
+        name: mypy
+        entry: poetry run mypy app tests
+        language: system
+        pass_filenames: false
+      - id: bandit
+        name: bandit
+        entry: poetry run bandit -c pyproject.toml -r app
+        language: system
+        pass_filenames: false
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

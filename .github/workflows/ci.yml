@@ -23,7 +23,9 @@ jobs:
       - name: Ruff lint
         run: poetry run ruff check .
       - name: Mypy
-        run: poetry run mypy app/
+        run: poetry run mypy app tests
+      - name: Bandit
+        run: poetry run bandit -c pyproject.toml -r app
 
   test:
     runs-on: ubuntu-latest

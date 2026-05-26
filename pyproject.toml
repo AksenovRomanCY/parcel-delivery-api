@@ -39,30 +39,42 @@ mypy = "^1.15.0"
 pre-commit = "^4.2.0"
 pytest = "^8.3.5"
 pytest-asyncio = ">=0.24.0,<1.0.0"
+bandit = {version = ">=1.8.0,<2.0.0", extras = ["toml"]}
+types-python-jose = ">=3.5.0.20250531"
 
 [tool.ruff]
 target-version = "py313"
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "C90", "PT", "D", "ANN"]
 ignore = ["B008", "UP046"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.mypy]
 python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
-ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+strict_equality = true
 
 [[tool.mypy.overrides]]
-module = ["tests", "tests.*"]
-disallow_untyped_defs = false
-check_untyped_defs = false
+module = ["apscheduler.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -74,3 +86,6 @@ markers = [
     "unit: unit tests (no external dependencies)",
     "integration: integration tests (requires DB and Redis)",
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "alembic"]
