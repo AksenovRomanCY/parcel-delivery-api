@@ -1,14 +1,15 @@
 # Parcel Delivery API
 
-**Parcel Delivery API** is a microservice for registering and tracking parcel deliveries. The service allows anonymous registration of parcels, automatically calculates delivery cost in Russian rubles based on weight and declared value in USD, periodically updates exchange rates, and provides an API to retrieve parcel types and track registered shipments.
+**Parcel Delivery API** is a FastAPI microservice for registering and tracking parcel deliveries. It supports legacy anonymous sessions via `X-Session-Id` and an optional JWT mode via `AUTH_REQUIRED=true`, calculates delivery cost in Russian rubles from parcel weight/value and the current USD/RUB rate, and exposes operational visibility through Prometheus metrics, structured logs, and optional Sentry.
 
 ## Core Functionality
 
-- **Parcel Registration**: A user (identified via session) can register a new parcel by providing a name, weight, declared value in USD, and parcel type. The service assigns a unique ID and asynchronously calculates the delivery cost in RUB.
+- **Parcel Registration**: A caller identified by session or JWT can register a parcel by providing a name, weight, declared value in USD, and parcel type. The service assigns a unique ID and asynchronously calculates the delivery cost in RUB.
 - **Retrieving Parcel Types**: A reference list of parcel types (e.g., clothing, electronics, other) is available via the API, intended for UI dropdowns and filters.
-- **List of Parcels**: Users can fetch a list of their parcels (per session), with filtering by type and presence of delivery cost, along with pagination.
+- **List of Parcels**: Users can fetch their own parcels, with filtering by type and presence of delivery cost, along with pagination.
 - **Parcel Details**: Each registered parcel includes detailed information, including the calculated delivery cost once it becomes available.
-- **Background Tasks**: The service periodically recalculates delivery costs for new parcels and caches the current USD/RUB exchange rate. A manual endpoint is available for triggering background tasks.
+- **Background Tasks**: The service periodically recalculates delivery costs for new parcels and caches the current USD/RUB exchange rate. A manual endpoint is available for operators when `TASK_ADMIN_TOKEN` is configured.
+- **Security and Observability**: Rate limiting is backed by Redis, JWT auth can be enabled through configuration, `/metrics` exposes Prometheus-compatible metrics, and Sentry can be enabled with `SENTRY_DSN`.
 
 ## Technology Stack
 
@@ -19,7 +20,11 @@
 | Cache & Sync          | Redis 7 (caching dictionaries, exchange rates, locking)     |
 | Background Tasks      | APScheduler (recalculates delivery costs every 5 minutes)   |
 | Validation & Schemas  | Pydantic 2 (BaseModel for input/output validation)          |
-| Logging               | Structured logging, unified across libraries like Uvicorn and SQLAlchemy |
+| Auth & Limits         | Legacy `X-Session-Id`, optional JWT, slowapi rate limiting        |
+| Observability         | Structured logging, Prometheus metrics, optional Sentry           |
+
+Operational note: `POST /tasks/recalc-delivery` requires `X-Admin-Token` and is
+disabled while `TASK_ADMIN_TOKEN` is empty.
 
 ## GitHub
 

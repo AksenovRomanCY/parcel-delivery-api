@@ -1,22 +1,40 @@
 # Running Tests
 
-After installing all dependencies (including `dev` dependencies where `pytest` and plugins are declared), you can run all tests from the project root using the following command:
+Test configuration lives in `pyproject.toml` under `[tool.pytest.ini_options]`.
+The suite is split into fast unit tests and integration tests that require MySQL
+and Redis.
+
+## Unit Tests
+
+Run the unit suite when you do not have local infrastructure running:
 
 ```bash
-pytest
+poetry run pytest tests/unit/ --tb=short -q
 ```
 
-Pytest will automatically discover and run all test files whose names start with `test_`.
+## Integration Tests
 
-The repository includes a `pytest.ini` configuration file that specifies the test directory and relevant options (e.g., enabling `asyncio` mode for asynchronous tests).
-
-### Example Output
-
-When tests are executed, you will see output indicating progress and status:
+Integration tests run Alembic migrations and use real MySQL and Redis services.
+For a local Docker Compose setup, expose the services on localhost and pass the
+Redis password from `.env`:
 
 ```bash
-test_example.py::test_function PASSED
-...
+docker compose up -d db redis
+DB_HOST=127.0.0.1 REDIS_HOST=127.0.0.1 REDIS_PASS=yourstrongpass \
+  poetry run pytest tests/integration/ --tb=short -q
 ```
 
-All tests should pass and return a `PASSED` status.
+In GitHub Actions the services are started by the workflow and `REDIS_PASS` is
+empty, matching the CI Redis container.
+
+## Full Suite
+
+With MySQL and Redis available:
+
+```bash
+poetry run pytest --tb=short -q
+```
+
+If the services are not available in a local run, integration tests are skipped
+with a short message. In CI, or when `REQUIRE_INTEGRATION_SERVICES=1` is set,
+missing services fail the run.

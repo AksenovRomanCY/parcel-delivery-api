@@ -36,6 +36,8 @@ cp .env.example .env
 ### Other Settings
 - **LOG_LEVEL** – Logging level (default: INFO; options: DEBUG, INFO, WARNING, ERROR)
 - **ENVIRONMENT** – Runtime environment (default: prod, can be set to dev to enable debug features)
+- **AUTH_REQUIRED** – Require JWT bearer tokens for parcel ownership instead of anonymous sessions (default: false)
+- **TASK_ADMIN_TOKEN** – Shared secret for manual operational endpoints. Empty disables manual task triggers.
 
 ## Example .env File
 ```ini
@@ -54,6 +56,8 @@ REDIS_PASS=yourstrongpass
 
 LOG_LEVEL=INFO
 ENVIRONMENT=prod
+AUTH_REQUIRED=false
+TASK_ADMIN_TOKEN=
 ```
 
 Note: Default values in .env.example are suitable for running via Docker Compose. For production, use secure passwords and adjust the configuration as needed.

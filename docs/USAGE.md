@@ -8,22 +8,32 @@ This section describes how to work with the Parcel Delivery API: key endpoints, 
 
 * **Swagger UI**: `GET /docs` – Interactive documentation for all routes and data schemas.
 * **Health Check**: `GET /health` – Always returns `{ "status": "ok" }` with status code 200 (used for uptime monitoring).
+* **Metrics**: `GET /metrics` – Prometheus-compatible metrics when `ENABLE_METRICS=true`.
 
 ### Main REST API Resources
 
+* `POST /auth/register` – Create a user and receive a JWT access token.
+* `POST /auth/login` – Authenticate and receive a JWT access token.
 * `GET /parcel-types` – Retrieve all available parcel types.
 * `POST /parcels` – Register a new parcel with specified attributes.
-* `GET /parcels` – List all parcels created in the current session (with filtering & pagination).
-* `GET /parcels/{id}` – Get detailed information about a specific parcel (if owned by session).
+* `GET /parcels` – List all parcels owned by the current session/user (with filtering & pagination).
+* `GET /parcels/{id}` – Get detailed information about a specific parcel (if owned by the caller).
 * `POST /tasks/recalc-delivery` – Manually trigger background recalculation of delivery costs (for debugging/admin).
 
 ---
 
-## Session Identification (X-Session-Id)
+## Caller Identification
 
-There is no authentication in the service. Each parcel is tied to an **anonymous session**, identified by the `X-Session-Id` header. If the header is not provided, the API generates a new UUID and returns it in the response header.
+The service has two modes controlled by `AUTH_REQUIRED`.
 
-Clients must retain and reuse this session ID in subsequent requests. Otherwise, each request will be treated as a new session and won't see previously created parcels.
+In the default legacy mode (`AUTH_REQUIRED=false`), each parcel is tied to an
+anonymous session identified by the `X-Session-Id` header. If the header is not
+provided, the API generates a new UUID and returns it in the response header.
+Clients must retain and reuse this session ID in subsequent requests.
+
+When `AUTH_REQUIRED=true`, clients call `/auth/register` or `/auth/login`, then
+send `Authorization: Bearer <token>` for parcel endpoints. In this mode parcel
+ownership is based on the JWT subject rather than `X-Session-Id`.
 
 ---
 
@@ -35,6 +45,31 @@ The API uses **JSON** for both requests and responses. All responses follow a st
 * On error: JSON with `code`, `message`, and optional `details`
 
 All response models use **camelCase** for JSON fields. Example: `weight_kg` in Python becomes `weightKg` in JSON, using Pydantic alias generator for frontend compatibility.
+
+---
+
+## POST /auth/register
+
+Registers a user and returns a JWT access token.
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securepass123"
+}
+```
+
+```json
+{
+  "access_token": "...",
+  "token_type": "bearer"
+}
+```
+
+## POST /auth/login
+
+Authenticates an existing user and returns the same token response shape as
+registration.
 
 ---
 
@@ -97,17 +132,18 @@ Registers a new parcel.
 ```json
 {
   "id": "...",
-  "session_id": "..."
+  "owner_id": "..."
 }
 ```
 
+> `owner_id` is the session ID in legacy mode and the user ID in JWT mode.
 > Delivery cost is calculated asynchronously (initially `null`).
 
 ---
 
 ## GET /parcels
 
-Returns all parcels for the current session.
+Returns all parcels for the current session/user.
 
 ### Query Parameters:
 
@@ -146,13 +182,13 @@ X-Session-Id: ...
 }
 ```
 
-> Results are cached for 60 seconds per session. Use polling to check when cost is calculated.
+> Results are cached briefly per caller/query. Use polling to check when cost is calculated.
 
 ---
 
 ## GET /parcels/{id}
 
-Returns a single parcel by ID if it belongs to the current session.
+Returns a single parcel by ID if it belongs to the current session/user.
 
 ### Example:
 
@@ -177,7 +213,7 @@ X-Session-Id: ...
 }
 ```
 
-> Returns `404` if not found or session mismatch.
+> Returns `404` if not found and `403` if the parcel exists but belongs to another caller.
 
 ---
 
@@ -186,12 +222,14 @@ X-Session-Id: ...
 Manually trigger delivery cost recalculation.
 
 * No body required.
+* Requires `X-Admin-Token` matching `TASK_ADMIN_TOKEN`.
 * Returns number of parcels updated.
 
 ### Example:
 
 ```http
 POST /tasks/recalc-delivery HTTP/1.1
+X-Admin-Token: ...
 ```
 
 ### Response:
@@ -200,7 +238,8 @@ POST /tasks/recalc-delivery HTTP/1.1
 { "updated": 5 }
 ```
 
-> Usually handled by background jobs. Use in test/admin scenarios only.
+> Usually handled by background jobs. If `TASK_ADMIN_TOKEN` is empty, manual
+> triggering is disabled and the endpoint returns `403`.
 
 ---
 
@@ -209,8 +248,11 @@ POST /tasks/recalc-delivery HTTP/1.1
 The service uses standardized error responses:
 
 * `400 Bad Request` — Business logic violation
-* `404 Not Found` — Resource missing or session mismatch
+* `401 Unauthorized` — Missing/invalid session or JWT
+* `403 Forbidden` — Caller is authenticated/identified but cannot access the resource
+* `404 Not Found` — Resource missing
 * `422 Unprocessable Entity` — Validation failure
+* `429 Too Many Requests` — Rate limit exceeded
 * `500 Internal Server Error` — Unexpected server error
 
 ### Example Error:
