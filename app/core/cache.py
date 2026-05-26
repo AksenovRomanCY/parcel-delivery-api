@@ -29,6 +29,19 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+def _extract_request_for_cache(
+    args: tuple[object, ...],
+    kwargs: dict[str, object],
+) -> tuple[Request, tuple[object, ...], dict[str, object]]:
+    """Return request plus handler args with request removed for key builders."""
+    if args and isinstance(args[0], Request):
+        return args[0], args[1:], kwargs
+
+    request = cast(Request, kwargs["request"])
+    cache_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
+    return request, args, cache_kwargs
+
+
 def make_cache_key(
     prefix: str,
     request: Request,
@@ -111,9 +124,12 @@ def redis_cache(
         @wraps(fn)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             redis: Redis = get_redis()
-            request = cast(Request, args[0] if args else kwargs["request"])
+            request, cache_args, cache_kwargs = _extract_request_for_cache(
+                cast(tuple[object, ...], args),
+                cast(dict[str, object], kwargs),
+            )
 
-            key = key_func(prefix, request, *args, **kwargs)
+            key = key_func(prefix, request, *cache_args, **cache_kwargs)
             cached = await redis.get(key)
             if cached:
                 return cast(R, json.loads(cached))
