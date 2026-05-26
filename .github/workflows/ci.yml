@@ -71,10 +71,18 @@ jobs:
           poetry install --with dev --no-root
       - name: Run migrations
         run: poetry run alembic upgrade head
+      - name: Reset coverage data
+        run: poetry run coverage erase
       - name: Run unit tests
-        run: poetry run pytest tests/unit/ --tb=short -q
+        run: poetry run pytest tests/unit/ --cov=app --cov-report= --cov-fail-under=0 --tb=short -q
       - name: Run integration tests
-        run: poetry run pytest tests/integration/ --tb=short -q -o asyncio_mode=auto
+        env:
+          REQUIRE_INTEGRATION_SERVICES: "1"
+        run: poetry run pytest tests/integration/ --cov=app --cov-append --cov-report= --cov-fail-under=0 --tb=short -q -o asyncio_mode=auto
+      - name: Check coverage
+        run: poetry run coverage report
+      - name: Generate coverage XML
+        run: poetry run coverage xml
 
   docker:
     runs-on: ubuntu-latest
