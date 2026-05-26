@@ -1,4 +1,4 @@
-"""seed parcel types
+"""Seed parcel types.
 
 Revision ID: 0c8ee6e20a41
 Revises: 45dd304438ec

@@ -1,4 +1,4 @@
-"""add user table and user_id to parcel
+"""Add user table and user ownership column to parcel.
 
 Revision ID: c3d4e5f6a7b8
 Revises: b2c3d4e5f6a7
@@ -20,6 +20,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    """Upgrade schema."""
     op.create_table(
         "user",
         sa.Column("id", sa.String(36), nullable=False),
@@ -36,6 +37,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Downgrade schema."""
     op.drop_constraint("fk_parcel_user_id", "parcel", type_="foreignkey")
     op.drop_column("parcel", "user_id")
     op.drop_index("ix_user_email", "user")

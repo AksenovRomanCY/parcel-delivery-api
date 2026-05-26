@@ -1,4 +1,4 @@
-"""float_to_decimal
+"""Convert parcel monetary and weight columns to decimals.
 
 Revision ID: a1b2c3d4e5f6
 Revises: 0c8ee6e20a41
@@ -20,6 +20,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    """Upgrade schema."""
     op.alter_column(
         "parcel",
         "weight_kg",
@@ -44,6 +45,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Downgrade schema."""
     op.alter_column(
         "parcel",
         "weight_kg",

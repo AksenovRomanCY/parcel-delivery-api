@@ -1,3 +1,5 @@
+"""Alembic environment configuration for database migrations."""
+
 from logging.config import fileConfig
 
 import pymysql

@@ -1,4 +1,4 @@
-"""init
+"""Initialize parcel and parcel type tables.
 
 Revision ID: 45dd304438ec
 Revises:

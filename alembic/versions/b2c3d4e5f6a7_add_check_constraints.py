@@ -1,4 +1,4 @@
-"""add check constraints
+"""Add parcel check constraints.
 
 Revision ID: b2c3d4e5f6a7
 Revises: a1b2c3d4e5f6
@@ -18,6 +18,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    """Upgrade schema."""
     op.create_check_constraint(
         "ck_parcel_weight_positive",
         "parcel",
@@ -36,6 +37,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Downgrade schema."""
     op.drop_constraint("ck_parcel_weight_positive", "parcel", type_="check")
     op.drop_constraint("ck_parcel_value_non_negative", "parcel", type_="check")
     op.drop_constraint("ck_parcel_cost_non_negative", "parcel", type_="check")
