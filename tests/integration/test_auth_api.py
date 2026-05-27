@@ -1,14 +1,18 @@
 """Integration tests for authentication endpoints."""
 
+import pytest
 from httpx import AsyncClient
 
 
 async def test_register_success(client: AsyncClient) -> None:
     """Register a new user and receive a bearer token."""
-    resp = await client.post(
-        "/auth/register",
-        json={"email": "new@example.com", "password": "securepass123"},
-    )
+    # Arrange
+    payload = {"email": "new@example.com", "password": "securepass123"}
+
+    # Act
+    resp = await client.post("/auth/register", json=payload)
+
+    # Assert
     assert resp.status_code == 201
     data = resp.json()
     assert "access_token" in data
@@ -17,43 +21,52 @@ async def test_register_success(client: AsyncClient) -> None:
 
 async def test_register_duplicate_email(client: AsyncClient) -> None:
     """Reject registration when the email is already present."""
+    # Arrange
     email = "dup@example.com"
     payload = {"email": email, "password": "securepass123"}
-
     resp1 = await client.post("/auth/register", json=payload)
     assert resp1.status_code == 201
 
+    # Act
     resp2 = await client.post("/auth/register", json=payload)
+
+    # Assert
     assert resp2.status_code == 400
     assert "already registered" in resp2.json()["message"]
 
 
-async def test_register_weak_password(client: AsyncClient) -> None:
-    """Reject passwords below the configured schema minimum."""
-    resp = await client.post(
-        "/auth/register",
-        json={"email": "weak@example.com", "password": "short"},
-    )
-    assert resp.status_code == 422
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"email": "weak@example.com", "password": "short"},
+        {"email": "not-an-email", "password": "securepass123"},
+    ],
+)
+async def test_register_rejects_invalid_payloads(
+    client: AsyncClient,
+    payload: dict[str, str],
+) -> None:
+    """Reject registration payloads that fail schema validation."""
+    # Arrange
 
+    # Act
+    resp = await client.post("/auth/register", json=payload)
 
-async def test_register_invalid_email(client: AsyncClient) -> None:
-    """Reject registration payloads with invalid email format."""
-    resp = await client.post(
-        "/auth/register",
-        json={"email": "not-an-email", "password": "securepass123"},
-    )
+    # Assert
     assert resp.status_code == 422
 
 
 async def test_login_success(client: AsyncClient) -> None:
     """Authenticate an existing user and return a bearer token."""
+    # Arrange
     email = "login@example.com"
     password = "securepass123"
-
     await client.post("/auth/register", json={"email": email, "password": password})
 
+    # Act
     resp = await client.post("/auth/login", json={"email": email, "password": password})
+
+    # Assert
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
@@ -62,22 +75,30 @@ async def test_login_success(client: AsyncClient) -> None:
 
 async def test_login_wrong_password(client: AsyncClient) -> None:
     """Reject login when the password does not match."""
+    # Arrange
     email = "wrongpw@example.com"
     await client.post(
         "/auth/register",
         json={"email": email, "password": "securepass123"},
     )
 
+    # Act
     resp = await client.post(
-        "/auth/login", json={"email": email, "password": "wrongpassword"}
+        "/auth/login",
+        json={"email": email, "password": "wrongpassword"},
     )
+
+    # Assert
     assert resp.status_code == 401
 
 
 async def test_login_nonexistent_user(client: AsyncClient) -> None:
     """Reject login for an email that has no account."""
-    resp = await client.post(
-        "/auth/login",
-        json={"email": "nobody@example.com", "password": "securepass123"},
-    )
+    # Arrange
+    payload = {"email": "nobody@example.com", "password": "securepass123"}
+
+    # Act
+    resp = await client.post("/auth/login", json=payload)
+
+    # Assert
     assert resp.status_code == 401

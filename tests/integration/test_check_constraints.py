@@ -1,7 +1,7 @@
 """Integration tests for CHECK constraints at the database level."""
 
+from collections.abc import Callable
 from decimal import Decimal
-from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import DatabaseError, IntegrityError
@@ -12,102 +12,54 @@ from app.models.parcel import Parcel
 # MySQL may raise either IntegrityError or OperationalError (wrapped as
 # DatabaseError) for CHECK constraint violations depending on the driver.
 _check_error = (IntegrityError, DatabaseError)
+ParcelFactory = Callable[..., Parcel]
 
 
-async def test_db_rejects_zero_weight(
-    db_session: AsyncSession, parcel_type_id: str
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"name": "zero-weight", "weight_kg": Decimal("0")},
+        {"name": "neg-weight", "weight_kg": Decimal("-1")},
+        {"name": "neg-value", "declared_value_usd": Decimal("-5.00")},
+        {"name": "neg-cost", "delivery_cost_rub": Decimal("-1.00")},
+    ],
+)
+async def test_db_rejects_check_constraint_violations(
+    db_session: AsyncSession,
+    parcel_type_id: str,
+    parcel_factory: ParcelFactory,
+    overrides: dict[str, object],
 ) -> None:
-    """CHECK constraint should reject weight_kg = 0."""
-    parcel = Parcel(
-        name="zero-weight",
-        weight_kg=Decimal("0"),
-        declared_value_usd=Decimal("10.00"),
-        session_id=str(uuid4()),
-        parcel_type_id=parcel_type_id,
-    )
+    """CHECK constraints should reject invalid parcel numeric values."""
+    # Arrange
+    parcel = parcel_factory(parcel_type_id=parcel_type_id, **overrides)
     db_session.add(parcel)
+
+    # Act / Assert
     with pytest.raises(_check_error):
         await db_session.flush()
 
 
-async def test_db_rejects_negative_weight(
-    db_session: AsyncSession, parcel_type_id: str
-) -> None:
-    """CHECK constraint should reject weight_kg < 0."""
-    parcel = Parcel(
-        name="neg-weight",
-        weight_kg=Decimal("-1"),
-        declared_value_usd=Decimal("10.00"),
-        session_id=str(uuid4()),
-        parcel_type_id=parcel_type_id,
-    )
-    db_session.add(parcel)
-    with pytest.raises(_check_error):
-        await db_session.flush()
-
-
-async def test_db_rejects_negative_declared_value(
-    db_session: AsyncSession, parcel_type_id: str
-) -> None:
-    """CHECK constraint should reject declared_value_usd < 0."""
-    parcel = Parcel(
-        name="neg-value",
-        weight_kg=Decimal("1.000"),
-        declared_value_usd=Decimal("-5.00"),
-        session_id=str(uuid4()),
-        parcel_type_id=parcel_type_id,
-    )
-    db_session.add(parcel)
-    with pytest.raises(_check_error):
-        await db_session.flush()
-
-
-async def test_db_rejects_negative_delivery_cost(
-    db_session: AsyncSession, parcel_type_id: str
-) -> None:
-    """CHECK constraint should reject delivery_cost_rub < 0."""
-    parcel = Parcel(
-        name="neg-cost",
-        weight_kg=Decimal("1.000"),
-        declared_value_usd=Decimal("10.00"),
-        delivery_cost_rub=Decimal("-1.00"),
-        session_id=str(uuid4()),
-        parcel_type_id=parcel_type_id,
-    )
-    db_session.add(parcel)
-    with pytest.raises(_check_error):
-        await db_session.flush()
-
-
-async def test_db_allows_null_delivery_cost(
-    db_session: AsyncSession, parcel_type_id: str
-) -> None:
-    """NULL delivery_cost_rub should be allowed (not yet calculated)."""
-    parcel = Parcel(
-        name="null-cost",
-        weight_kg=Decimal("1.000"),
-        declared_value_usd=Decimal("10.00"),
-        delivery_cost_rub=None,
-        session_id=str(uuid4()),
-        parcel_type_id=parcel_type_id,
-    )
-    db_session.add(parcel)
-    await db_session.flush()
-    assert parcel.id is not None
-
-
+@pytest.mark.parametrize("delivery_cost_rub", [None, Decimal("50.00")])
 async def test_db_allows_valid_values(
-    db_session: AsyncSession, parcel_type_id: str
+    db_session: AsyncSession,
+    parcel_type_id: str,
+    parcel_factory: ParcelFactory,
+    delivery_cost_rub: Decimal | None,
 ) -> None:
-    """All-valid data should be accepted."""
-    parcel = Parcel(
+    """Valid parcel data should be accepted by database constraints."""
+    # Arrange
+    parcel = parcel_factory(
         name="valid",
         weight_kg=Decimal("2.500"),
         declared_value_usd=Decimal("100.00"),
-        delivery_cost_rub=Decimal("50.00"),
-        session_id=str(uuid4()),
+        delivery_cost_rub=delivery_cost_rub,
         parcel_type_id=parcel_type_id,
     )
     db_session.add(parcel)
+
+    # Act
     await db_session.flush()
+
+    # Assert
     assert parcel.id is not None

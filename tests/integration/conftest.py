@@ -11,14 +11,13 @@ os.environ.setdefault("DB_HOST", "127.0.0.1")
 os.environ.setdefault("DB_PORT", "3306")
 os.environ.setdefault("DB_USER", "root")
 os.environ.setdefault("DB_PASSWORD", "root")
-os.environ.setdefault("DB_NAME", "delivery")
+os.environ.setdefault("DB_NAME", "delivery_test")
 os.environ.setdefault("REDIS_HOST", "127.0.0.1")
 os.environ.setdefault("REDIS_PORT", "6379")
 os.environ.setdefault("REDIS_PASS", "")
 
-import asyncio
 import subprocess
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable
 from typing import cast
 from uuid import uuid4
 
@@ -27,9 +26,12 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from redis import Redis
 from redis.exceptions import RedisError
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 _integration_marker = pytest.mark.integration
+_integration_asyncio_marker = pytest.mark.asyncio(loop_scope="session")
+ParcelPayloadFactory = Callable[..., dict[str, object]]
 
 
 def _strict_integration_mode() -> bool:
@@ -79,31 +81,37 @@ def _ensure_integration_services_available() -> None:
         redis.close()
 
 
+def _ensure_test_database_exists() -> None:
+    """Create the configured test database before Alembic targets it."""
+    db_name = os.environ["DB_NAME"]
+    driver = os.environ.get("DB_PROTOCOL", "mysql+aiomysql").replace(
+        "aiomysql", "pymysql"
+    )
+    server_url = (
+        f"{driver}://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}@"
+        f"{os.environ['DB_HOST']}:{os.environ['DB_PORT']}"
+    )
+    engine = create_engine(server_url, future=True)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text(f"CREATE DATABASE IF NOT EXISTS `{db_name}`"))
+    finally:
+        engine.dispose()
+
+
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Auto-apply the ``integration`` marker to every test under tests/integration/."""
+    """Auto-apply integration markers to every test under tests/integration/."""
     for item in items:
         if "integration" in str(item.fspath):
             item.add_marker(_integration_marker)
-
-
-@pytest.fixture(scope="session")
-def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
-    """Create a single event loop shared by all integration tests and fixtures.
-
-    This prevents event-loop mismatch when module-level singletons
-    (SQLAlchemy engine, Redis) bind to the first loop and are then
-    used by subsequent tests.
-    """
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    loop.close()
+            item.add_marker(_integration_asyncio_marker, append=False)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def _run_migrations() -> None:
     """Run alembic migrations once before all integration tests."""
     _ensure_integration_services_available()
+    _ensure_test_database_exists()
 
     result = subprocess.run(
         ["alembic", "upgrade", "head"],
@@ -114,7 +122,19 @@ def _run_migrations() -> None:
         pytest.fail(f"Alembic migration failed:\n{result.stderr}")
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
+async def _close_integration_clients() -> AsyncIterator[None]:
+    """Close lazy async clients after all integration tests finish."""
+    yield
+
+    from app.db.session import engine
+    from app.redis_client import close_redis
+
+    await close_redis()
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(loop_scope="session", autouse=True)
 async def _flush_stores() -> None:
     """Flush Redis and clean user/parcel tables before each test."""
     from redis.asyncio import Redis
@@ -138,7 +158,7 @@ async def _flush_stores() -> None:
         await session.commit()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def client() -> AsyncIterator[AsyncClient]:
     """Async HTTP client wired to the FastAPI ASGI app."""
     from app.main import app
@@ -155,6 +175,29 @@ def session_id() -> str:
 
 
 @pytest.fixture
+def parcel_payload_factory() -> ParcelPayloadFactory:
+    """Build camelCase parcel API payloads with valid defaults."""
+
+    def _factory(
+        parcel_type_id: str,
+        name: str = "Test Parcel",
+        weight_kg: str = "1.500",
+        declared_value_usd: str = "100.00",
+        **overrides: object,
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "name": name,
+            "weightKg": weight_kg,
+            "declaredValueUsd": declared_value_usd,
+            "parcelTypeId": parcel_type_id,
+        }
+        payload.update(overrides)
+        return payload
+
+    return _factory
+
+
+@pytest.fixture
 def enable_task_admin_token(monkeypatch: pytest.MonkeyPatch) -> None:
     """Enable the manual task endpoint for tests that exercise it."""
     from app.core.settings import settings
@@ -168,7 +211,7 @@ def admin_headers(enable_task_admin_token: None) -> dict[str, str]:
     return {"X-Admin-Token": "test-admin-token"}
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def parcel_type_id(client: AsyncClient) -> str:
     """First parcel-type ID from the seeded database."""
     resp = await client.get("/parcel-types")
@@ -178,7 +221,7 @@ async def parcel_type_id(client: AsyncClient) -> str:
     return cast(str, items[0]["id"])
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def db_session() -> AsyncIterator[AsyncSession]:
     """Direct async DB session for constraint/model-level tests."""
     from app.db.session import AsyncSessionLocal
