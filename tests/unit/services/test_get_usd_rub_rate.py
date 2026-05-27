@@ -18,11 +18,15 @@ from app.services.rates import (  # noqa
 @patch("app.services.rates.get_redis")
 async def test_get_usd_rub_rate_from_cache(mock_get_redis: MagicMock) -> None:
     """USD/RUB rate should be returned from Redis cache when available."""
+    # Arrange
     mock_redis = AsyncMock()
     mock_redis.get.return_value = b"89.1234"
     mock_get_redis.return_value = mock_redis
 
+    # Act
     result = await get_usd_rub_rate()
+
+    # Assert
     assert result == Decimal("89.1234")
     mock_redis.get.assert_called_once()
     mock_redis.set.assert_not_called()
@@ -36,13 +40,17 @@ async def test_get_usd_rub_rate_fetch_and_cache(
     mock_get_redis: MagicMock,
 ) -> None:
     """USD/RUB rate should be fetched and cached when Redis misses."""
+    # Arrange
     mock_redis = AsyncMock()
     mock_redis.get.return_value = None
     mock_get_redis.return_value = mock_redis
 
     mock_fetch.return_value = Decimal("90.5678")
 
+    # Act
     result = await get_usd_rub_rate()
+
+    # Assert
     today = datetime.now(UTC).date().isoformat()
     expected_key = KEY_TMPL.format(date=today)
 
@@ -55,6 +63,7 @@ async def test_get_usd_rub_rate_fetch_and_cache(
 @patch("httpx.AsyncClient.get")
 async def test_fetch_rate_from_cbr_success(mock_http_get: MagicMock) -> None:
     """CBR response should be parsed into Decimal."""
+    # Arrange
 
     class MockResponse:
         """Minimal httpx response double for a successful CBR call."""
@@ -67,7 +76,10 @@ async def test_fetch_rate_from_cbr_success(mock_http_get: MagicMock) -> None:
 
     mock_http_get.return_value = MockResponse()
 
+    # Act
     result = await _fetch_rate_from_cbr()
+
+    # Assert
     assert result == Decimal("92.3456")
     mock_http_get.assert_called_once_with(CBR_URL)
 
@@ -76,6 +88,7 @@ async def test_fetch_rate_from_cbr_success(mock_http_get: MagicMock) -> None:
 @patch("httpx.AsyncClient.get")
 async def test_fetch_rate_from_cbr_http_error(mock_http_get: MagicMock) -> None:
     """CBR HTTP errors should be propagated after retries fail."""
+    # Arrange
     from httpx import HTTPStatusError, Request, Response
 
     mock_response = Response(status_code=500, request=Request("GET", CBR_URL))
@@ -83,5 +96,6 @@ async def test_fetch_rate_from_cbr_http_error(mock_http_get: MagicMock) -> None:
         "Server Error", request=mock_response.request, response=mock_response
     )
 
+    # Act / Assert
     with pytest.raises(HTTPStatusError):
         await _fetch_rate_from_cbr()

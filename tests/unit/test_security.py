@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from jose import jwt
 
 from app.core.security import (
@@ -15,47 +16,64 @@ from app.core.settings import settings
 
 def test_hash_and_verify_password() -> None:
     """Password hashing should verify the original password."""
+    # Arrange
     password = "my-secret-password"
+
+    # Act
     hashed = hash_password(password)
+
+    # Assert
     assert hashed != password
     assert verify_password(password, hashed)
 
 
 def test_verify_wrong_password() -> None:
     """Password verification should reject a wrong password."""
+    # Arrange
     hashed = hash_password("correct-password")
-    assert not verify_password("wrong-password", hashed)
+
+    # Act
+    verified = verify_password("wrong-password", hashed)
+
+    # Assert
+    assert not verified
 
 
 def test_create_and_decode_token() -> None:
     """JWT creation and decoding should round-trip the subject."""
+    # Arrange
     subject = "user-123"
+
+    # Act
     token = create_access_token(subject)
     decoded = decode_token(token)
+
+    # Assert
     assert decoded == subject
 
 
-def test_decode_expired_token() -> None:
-    """Expired JWT should decode as invalid."""
-    expire = datetime.now(UTC) - timedelta(minutes=1)
-    token = jwt.encode(
-        {"sub": "user-123", "exp": expire},
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM,
-    )
-    assert decode_token(token) is None
+@pytest.mark.parametrize(
+    "token",
+    [
+        jwt.encode(
+            {"sub": "user-123", "exp": datetime.now(UTC) - timedelta(minutes=1)},
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM,
+        ),
+        "not-a-valid-token",
+        jwt.encode(
+            {"sub": "user-123", "exp": datetime.now(UTC) + timedelta(hours=1)},
+            "wrong-secret-key",
+            algorithm=settings.JWT_ALGORITHM,
+        ),
+    ],
+)
+def test_decode_invalid_tokens(token: str) -> None:
+    """Invalid JWTs should decode as invalid."""
+    # Arrange
 
+    # Act
+    decoded = decode_token(token)
 
-def test_decode_invalid_token() -> None:
-    """Malformed JWT should decode as invalid."""
-    assert decode_token("not-a-valid-token") is None
-
-
-def test_decode_token_wrong_secret() -> None:
-    """JWT signed with the wrong secret should decode as invalid."""
-    token = jwt.encode(
-        {"sub": "user-123", "exp": datetime.now(UTC) + timedelta(hours=1)},
-        "wrong-secret-key",
-        algorithm=settings.JWT_ALGORITHM,
-    )
-    assert decode_token(token) is None
+    # Assert
+    assert decoded is None

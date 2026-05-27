@@ -1,5 +1,6 @@
 """Unit tests for custom Prometheus metrics."""
 
+import pytest
 from prometheus_client import Counter, Histogram
 
 from app.core.metrics import (
@@ -9,21 +10,35 @@ from app.core.metrics import (
 )
 
 
-def test_parcels_created_is_counter() -> None:
-    """PARCELS_CREATED should be a Prometheus counter."""
-    assert isinstance(PARCELS_CREATED, Counter)
+@pytest.mark.parametrize(
+    ("metric", "expected_type"),
+    [
+        (PARCELS_CREATED, Counter),
+        (DELIVERY_RECALC_DURATION, Histogram),
+        (DELIVERY_RECALC_PARCELS, Counter),
+    ],
+)
+def test_metrics_have_expected_types(
+    metric: Counter | Histogram,
+    expected_type: type[Counter] | type[Histogram],
+) -> None:
+    """Custom metrics should use the expected Prometheus metric types."""
+    # Arrange
 
+    # Act
+    is_expected_type = isinstance(metric, expected_type)
 
-def test_delivery_recalc_duration_is_histogram() -> None:
-    """DELIVERY_RECALC_DURATION should be a Prometheus histogram."""
-    assert isinstance(DELIVERY_RECALC_DURATION, Histogram)
-
-
-def test_delivery_recalc_parcels_is_counter() -> None:
-    """DELIVERY_RECALC_PARCELS should be a Prometheus counter."""
-    assert isinstance(DELIVERY_RECALC_PARCELS, Counter)
+    # Assert
+    assert is_expected_type
 
 
 def test_parcels_created_accepts_parcel_type_label() -> None:
     """PARCELS_CREATED should accept the parcel_type label."""
-    PARCELS_CREATED.labels(parcel_type="test-type").inc()
+    # Arrange
+    labels = PARCELS_CREATED.labels(parcel_type="test-type")
+
+    # Act
+    labels.inc()
+
+    # Assert
+    assert labels is PARCELS_CREATED.labels(parcel_type="test-type")
