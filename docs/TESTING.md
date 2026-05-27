@@ -54,12 +54,17 @@ For a local Docker Compose setup, expose the services on localhost and load the
 same test values used by local pytest commands:
 
 ```bash
-docker compose --env-file .env.test up -d db redis
+COMPOSE_ENV_FILE=.env.test docker compose --env-file .env.test up -d db redis
 set -a
 source .env.test
 set +a
 REQUIRE_INTEGRATION_SERVICES=1 poetry run pytest tests/integration/ --tb=short -q
 ```
+
+`--env-file .env.test` controls Docker Compose variable interpolation, such as
+published ports and MySQL database name. `COMPOSE_ENV_FILE=.env.test` controls
+the `env_file` mounted into services, so Redis gets the same `REDIS_PASS` that
+pytest uses.
 
 In GitHub Actions the services are started by the workflow and `REDIS_PASS` is
 empty, matching the CI Redis container.
@@ -89,7 +94,7 @@ missing services fail the run.
 ## Coverage Gate
 
 CI measures combined coverage for `app/` across unit and integration tests and
-fails below 70%. Run the same gate locally when MySQL and Redis are available:
+fails below 85%. Run the same gate locally when MySQL and Redis are available:
 
 ```bash
 poetry run coverage erase

@@ -16,7 +16,7 @@ services:
     volumes:
       - .:/code
     env_file:
-      - .env
+      - "${COMPOSE_ENV_FILE:-.env}"
     depends_on:
       db:
         condition: service_healthy
@@ -39,7 +39,8 @@ services:
       - app.scheduler_main
     volumes:
       - .:/code
-    env_file: .env
+    env_file:
+      - "${COMPOSE_ENV_FILE:-.env}"
     depends_on:
       db:
         condition: service_healthy
@@ -71,7 +72,7 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
     env_file:
-      - .env
+      - "${COMPOSE_ENV_FILE:-.env}"
     volumes:
       - ./docker/redis/redis.conf.tpl:/etc/redis/redis.conf.tpl
     entrypoint:
