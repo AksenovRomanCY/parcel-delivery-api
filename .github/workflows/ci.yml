@@ -33,7 +33,7 @@ jobs:
       mysql:
         image: mysql:8.4
         env:
-          MYSQL_DATABASE: delivery
+          MYSQL_DATABASE: delivery_test
           MYSQL_ROOT_PASSWORD: root
         ports:
           - 3306:3306
@@ -55,7 +55,7 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
-      DB_NAME: delivery
+      DB_NAME: delivery_test
       DB_PORT: "3306"
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: "6379"
@@ -78,7 +78,7 @@ jobs:
       - name: Run integration tests
         env:
           REQUIRE_INTEGRATION_SERVICES: "1"
-        run: poetry run pytest tests/integration/ --cov=app --cov-append --cov-report= --cov-fail-under=0 --tb=short -q -o asyncio_mode=auto
+        run: poetry run pytest tests/integration/ --cov=app --cov-append --cov-report= --cov-fail-under=0 --tb=short -q
       - name: Check coverage
         run: poetry run coverage report
       - name: Generate coverage XML
