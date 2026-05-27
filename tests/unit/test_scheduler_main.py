@@ -1,5 +1,6 @@
 """Unit tests for the standalone scheduler entrypoint."""
 
+import asyncio
 import signal
 from collections.abc import Callable, Coroutine
 from typing import Any
@@ -39,9 +40,9 @@ async def test_main_wires_scheduler_lifecycle(
     monkeypatch.setattr(scheduler_main, "init_sentry", init_sentry)
     monkeypatch.setattr(scheduler_main, "init_scheduler", init_scheduler)
     monkeypatch.setattr(scheduler_main, "close_redis", close_redis)
-    monkeypatch.setattr(scheduler_main.asyncio, "new_event_loop", lambda: loop)
+    monkeypatch.setattr(asyncio, "new_event_loop", lambda: loop)
     set_event_loop = MagicMock()
-    monkeypatch.setattr(scheduler_main.asyncio, "set_event_loop", set_event_loop)
+    monkeypatch.setattr(asyncio, "set_event_loop", set_event_loop)
 
     # Act
     scheduler_main.main()
