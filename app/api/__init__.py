@@ -1,8 +1,19 @@
-"""HTTP route modules exposed by the FastAPI application."""
+"""HTTP route modules exposed by the FastAPI application.
 
-from .auth import router as auth_router
-from .health import router as health_router
-from .parcel import router as parcel_router
-from .parcel_type import router as parcel_type_router
+Routers are collected here so :mod:`app.main` can mount domain areas without
+knowing the file layout inside ``app.api``. Route handlers should stay thin:
+translate HTTP concerns, call services, and let shared exception handlers turn
+domain errors into response payloads.
+"""
 
-__all__ = ["auth_router", "health_router", "parcel_type_router", "parcel_router"]
+from app.api.auth import router as auth_router
+from app.api.health import router as health_router
+from app.api.parcel import router as parcel_router
+from app.api.parcel_type import router as parcel_type_router
+
+__all__ = (
+    "auth_router",
+    "health_router",
+    "parcel_router",
+    "parcel_type_router",
+)

@@ -9,13 +9,20 @@ from redis.asyncio import Redis
 
 from app.core.settings import settings
 
-__all__ = ["get_redis", "close_redis"]
+__all__ = (
+    "close_redis",
+    "get_redis",
+)
 
 _redis: Redis | None = None
 
 
 def get_redis() -> Redis:
-    """Create on first call and return the app Redis connection."""
+    """Create on first call and return the app Redis connection.
+
+    The singleton avoids opening a new TCP connection for every cache lookup,
+    rate fetch, or task lock operation inside the same process.
+    """
     global _redis
     if _redis is None:
         _redis = Redis.from_url(settings.REDIS_URL, decode_responses=True)

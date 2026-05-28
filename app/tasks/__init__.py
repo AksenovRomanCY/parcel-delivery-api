@@ -1,6 +1,6 @@
-"""Background task scheduler and delivery recalculation jobs."""
+"""Background task scheduler and delivery recalculation jobs.
 
-from .delivery import recalc_delivery_costs
-from .scheduler import init_scheduler
-
-__all__ = ["recalc_delivery_costs", "init_scheduler"]
+Task functions are importable from both the standalone scheduler process and
+manual operational HTTP endpoints. Keep task code idempotent where possible so
+either entrypoint can trigger it safely.
+"""

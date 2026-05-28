@@ -1,5 +1,13 @@
-"""The public interface of the `app.redis_client' package."""
+"""Public interface of the ``app.redis_client`` package.
 
-from .client import close_redis, get_redis  # noqa: F401
+Use these exports instead of importing ``client`` internals directly. The
+module hides the lazy singleton used by response caching, rate lookup caching,
+and delivery-job locking.
+"""
 
-__all__ = ["get_redis", "close_redis"]
+from app.redis_client.client import close_redis, get_redis
+
+__all__ = (
+    "close_redis",
+    "get_redis",
+)
