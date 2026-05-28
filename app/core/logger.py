@@ -11,7 +11,11 @@ from app.core.settings import settings
 
 
 def setup_logging() -> None:
-    """Initialize application-wide logging configuration."""
+    """Initialize application-wide logging configuration.
+
+    Called by both the FastAPI process and scheduler process so logs have the
+    same shape no matter which entrypoint emits them.
+    """
     level = logging.getLevelName(settings.LOG_LEVEL)
 
     fmt = "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
@@ -25,6 +29,8 @@ def setup_logging() -> None:
     )
 
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        # Let Uvicorn loggers propagate into our root handler instead of
+        # installing a second handler with a different format.
         log = logging.getLogger(name)
         log.handlers.clear()
         log.propagate = True
@@ -38,6 +44,8 @@ def setup_logging() -> None:
         "alembic",
     )
     for name in noisy_sql_loggers:
+        # SQLAlchemy/Alembic can be very chatty; clear their handlers first so
+        # level choices below are the only thing controlling output volume.
         log = logging.getLogger(name)
         log.handlers.clear()
         log.propagate = True

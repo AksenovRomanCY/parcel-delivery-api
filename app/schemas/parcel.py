@@ -1,4 +1,8 @@
-"""Schemas for registering, listing, and filtering parcels."""
+"""Schemas for registering, listing, and filtering parcels.
+
+Field constraints mirror database checks and keep monetary/weight values as
+``Decimal`` to avoid float rounding in pricing calculations.
+"""
 
 from decimal import Decimal
 from typing import Annotated
@@ -13,7 +17,11 @@ NonNegativeMoney = Annotated[Decimal, Field(ge=0, max_digits=14, decimal_places=
 
 
 class ParcelBase(BaseModel):
-    """Base fields shared between parcel creation and internal use."""
+    """Base fields shared between parcel creation and internal use.
+
+    Camel-case aliases are generated for HTTP clients while Python code can keep
+    idiomatic snake_case field access.
+    """
 
     name: str = Field(..., max_length=255, examples=["iPhone 15 Pro"])
     weight_kg: PositiveWeight = Field(..., examples=[1.2])
@@ -67,7 +75,12 @@ class ParcelRead(BaseModel):
 
 
 class ParcelFilterParams(BaseModel):
-    """Query parameters used to filter the parcel list."""
+    """Query parameters used to filter the parcel list.
+
+    ``has_cost`` supports the asynchronous nature of delivery pricing: callers
+    can ask for parcels that are still waiting for the background job or those
+    already priced.
+    """
 
     type_id: UUID4 | None = Field(None, description="Filter by parcel type")
     has_cost: bool | None = Field(

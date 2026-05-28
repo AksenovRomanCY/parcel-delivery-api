@@ -1,4 +1,9 @@
-"""APScheduler lifecycle wiring for recurring background tasks."""
+"""APScheduler lifecycle wiring for recurring background tasks.
+
+The scheduler process imports this module to create jobs, but startup/shutdown
+signal handling stays in ``app.scheduler_main``. Keeping those concerns split
+makes job configuration testable without running an event loop forever.
+"""
 
 from asyncio import AbstractEventLoop
 

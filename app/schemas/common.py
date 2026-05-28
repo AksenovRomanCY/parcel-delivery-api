@@ -1,4 +1,8 @@
-"""Common auxiliary schemas for errors and pagination responses."""
+"""Common auxiliary schemas for errors and pagination responses.
+
+These types are shared by multiple routers so clients can rely on one error
+envelope and one pagination envelope across the API.
+"""
 
 from collections.abc import Sequence
 from typing import Any, Generic, TypeVar
@@ -24,6 +28,9 @@ class ErrorResponse(BaseModel):
 
 class PaginationParams(BaseModel):
     """Query string parameters for paginating list endpoints.
+
+    The limits are intentionally enforced at the schema layer so route handlers
+    and services can trust the values they receive.
 
     Attributes:
         limit: Maximum number of items to return (default: 20, max: 100).

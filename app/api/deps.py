@@ -41,7 +41,14 @@ def get_session_id(request: Request) -> str:
 async def get_current_user_id(
     token: str | None = Depends(oauth2_scheme),
 ) -> str:
-    """Extract the user ID from a JWT Bearer token."""
+    """Extract the user ID from a JWT Bearer token.
+
+    Returns:
+        User ID stored in the token ``sub`` claim.
+
+    Raises:
+        UnauthorizedError: If the token is missing, invalid, or expired.
+    """
     if not token:
         raise UnauthorizedError("Missing authorization token")
     user_id = decode_token(token)
@@ -60,7 +67,11 @@ async def get_owner_id(
     When AUTH_REQUIRED=False: falls back to session_id from middleware.
     """
     if settings.AUTH_REQUIRED:
+        # JWT mode stores parcel ownership in Parcel.user_id and requires a
+        # Bearer token for every protected parcel operation.
         return await get_current_user_id(token)
+    # Legacy mode stores parcel ownership in Parcel.session_id and relies on
+    # session middleware to create/propagate X-Session-Id.
     return get_session_id(request)
 
 

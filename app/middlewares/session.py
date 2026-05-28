@@ -1,8 +1,9 @@
-"""Session ID middleware.
+"""Session ID middleware for legacy anonymous ownership mode.
 
-Ensures that every incoming HTTP request has a session identifier
-attached, even if the client is anonymous. The session ID is stored in
-the request state and propagated back in the response headers.
+Ensures that every incoming HTTP request has a session identifier attached,
+even if the client is anonymous. The session ID is stored in request state and
+propagated back in response headers so clients can continue listing and reading
+the parcels they created before JWT auth is required.
 """
 
 import logging
@@ -43,6 +44,9 @@ async def assign_session_id(
         try:
             UUID(session)
         except ValueError:
+            # Treat malformed client-provided IDs as absent. This avoids storing
+            # arbitrary strings in ownership columns while keeping the flow
+            # anonymous and self-healing.
             log.warning("invalid_session_id_format: session_id=%s", session)
             session = str(uuid4())
             log.debug("new_session_id_assigned: session_id=%s", session)

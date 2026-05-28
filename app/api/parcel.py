@@ -1,4 +1,9 @@
-"""Parcel API endpoints for creation, listing, detail, and status updates."""
+"""Parcel API endpoints for creation, listing, detail, and status updates.
+
+This router handles HTTP concerns for the main parcel workflow. Ownership is
+resolved by dependencies and enforced in ``ParcelService`` so route handlers do
+not need to know whether the caller is anonymous-session or JWT-based.
+"""
 
 import logging
 
@@ -41,7 +46,11 @@ async def register_parcel(
     db: AsyncSession = Depends(get_db),
     owner_id: str = Depends(get_owner_id),
 ) -> ParcelCreateResponse:
-    """Register a new parcel and persist it to the database."""
+    """Register a new parcel and persist it to the database.
+
+    The response intentionally echoes ``owner_id`` to make the active ownership
+    mode visible to clients and integration tests.
+    """
     log.info("api_register_parcel_called: owner_id=%s", owner_id)
     parcel = await ParcelService(db).create_from_dto(body, owner_id)
     return ParcelCreateResponse(id=parcel.id, owner_id=owner_id)
@@ -63,7 +72,11 @@ async def list_parcels(
     db: AsyncSession = Depends(get_db),
     owner_id: str = Depends(get_owner_id),
 ) -> PaginatedResponse[ParcelRead]:
-    """List parcels belonging to the current user/session, with optional filters."""
+    """List parcels belonging to the current user/session, with optional filters.
+
+    Results are cached per owner and query string. The service returns both the
+    total count and current page rows so pagination metadata stays consistent.
+    """
     total, rows = await ParcelService(db).list_owned(
         owner_id=owner_id,
         filters=filters,
@@ -92,7 +105,11 @@ async def get_parcel(
     db: AsyncSession = Depends(get_db),
     owner_id: str = Depends(get_owner_id),
 ) -> Parcel:
-    """Retrieve a single parcel by ID, ensuring it belongs to the caller."""
+    """Retrieve a single parcel by ID, ensuring it belongs to the caller.
+
+    Unauthorized ownership is intentionally mapped to a generic HTTP error so
+    callers cannot infer another user's parcel state from this endpoint.
+    """
     log.info("api_get_parcel_called: parcel_id=%s owner_id=%s", parcel_id, owner_id)
     try:
         parcel = await ParcelService(db).get_owned(parcel_id, owner_id)

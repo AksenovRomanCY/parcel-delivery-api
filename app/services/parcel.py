@@ -1,4 +1,9 @@
-"""Business logic for parcel creation, ownership checks, and status updates."""
+"""Business logic for parcel creation, ownership checks, and status updates.
+
+Parcel routes delegate here for all database-facing rules: parcel type
+existence, owner assignment, owner checks, list filters, and delivery-cost
+updates from the background job.
+"""
 
 import logging
 from decimal import Decimal
@@ -36,6 +41,9 @@ class ParcelService(CRUDBase[Parcel]):
         Returns:
             Parcel: The newly created parcel, refreshed from the database.
         """
+        # Validate the reference table before creating the parcel. The database
+        # foreign key would also reject invalid IDs, but this keeps the error in
+        # the business-error envelope used by the API.
         type_exists = await self.session.scalar(
             select(ParcelType.id).where(ParcelType.id == data.parcel_type_id)
         )
@@ -82,8 +90,10 @@ class ParcelService(CRUDBase[Parcel]):
             raise NotFoundError("Parcel not found")
 
         if settings.AUTH_REQUIRED:
+            # JWT mode checks the user_id column populated during creation.
             owner_match = parcel.user_id == owner_id
         else:
+            # Legacy mode checks the session_id issued by middleware.
             owner_match = parcel.session_id == owner_id
 
         if not owner_match:
@@ -113,6 +123,8 @@ class ParcelService(CRUDBase[Parcel]):
         if filters.type_id:
             conditions.append(Parcel.parcel_type_id == filters.type_id)
         if filters.has_cost is True:
+            # Delivery cost is filled asynchronously; this filter lets clients
+            # separate ready parcels from those still waiting for the job.
             conditions.append(Parcel.delivery_cost_rub.is_not(None))
         if filters.has_cost is False:
             conditions.append(Parcel.delivery_cost_rub.is_(None))

@@ -1,4 +1,9 @@
-"""User ORM model for JWT authentication mode."""
+"""User ORM model for JWT authentication mode.
+
+Users are only required when ``AUTH_REQUIRED=True``. The legacy session mode can
+still run without user accounts, which is why parcel ownership supports both
+``session_id`` and nullable ``user_id``.
+"""
 
 from datetime import UTC, datetime
 from uuid import uuid4
@@ -10,7 +15,11 @@ from app.db.base import Base
 
 
 class User(Base):
-    """Registered user with email/password credentials."""
+    """Registered user with email/password credentials.
+
+    Passwords are stored as bcrypt hashes produced by ``app.core.security``.
+    The model intentionally keeps only fields needed for authentication.
+    """
 
     __tablename__ = "user"
 

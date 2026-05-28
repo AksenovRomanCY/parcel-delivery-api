@@ -1,4 +1,9 @@
-"""Business logic for parcel type lookup and pagination."""
+"""Business logic for parcel type lookup and pagination.
+
+Parcel types are small read-only reference data from the API perspective. This
+service centralizes ordering and counting so route handlers do not duplicate
+SQLAlchemy statements.
+"""
 
 from sqlalchemy import func, select
 
@@ -7,9 +12,9 @@ from app.services.base import CRUDBase
 
 
 class ParcelTypeService(CRUDBase[ParcelType]):
-    """Service layer that exposes CRUD-style helpers for ``ParcelType``."""
+    """Service layer that exposes read helpers for ``ParcelType``."""
 
-    # Concrete SQLAlchemy model
+    # Concrete SQLAlchemy model consumed by CRUDBase generic helpers.
     model = ParcelType
 
     async def list_all(self) -> list[ParcelType]:

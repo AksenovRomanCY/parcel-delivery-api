@@ -33,7 +33,12 @@ def _extract_request_for_cache(
     args: tuple[object, ...],
     kwargs: dict[str, object],
 ) -> tuple[Request, tuple[object, ...], dict[str, object]]:
-    """Return request plus handler args with request removed for key builders."""
+    """Return request plus handler args with request removed for key builders.
+
+    Decorated FastAPI handlers may receive ``request`` positionally or by
+    keyword depending on how tests call them, so the cache wrapper normalizes
+    both forms before key generation.
+    """
     if args and isinstance(args[0], Request):
         return args[0], args[1:], kwargs
 
@@ -69,6 +74,8 @@ def make_cache_key(
         },
         sort_keys=True,
     )
+    # Hash the normalized JSON payload so Redis keys stay short and stable even
+    # when query strings grow.
     digest = hashlib.sha256(raw_key.encode()).hexdigest()
     return f"{prefix}:{digest}"
 
@@ -100,6 +107,8 @@ def make_cache_key_no_session(
         },
         sort_keys=True,
     )
+    # Public reference data does not vary by user, so no auth/session identity
+    # is included in this key.
     digest = hashlib.sha256(raw_key.encode()).hexdigest()
     return f"{prefix}:{digest}"
 
@@ -132,6 +141,8 @@ def redis_cache(
             key = key_func(prefix, request, *cache_args, **cache_kwargs)
             cached = await redis.get(key)
             if cached:
+                # Cached responses are plain JSON-compatible values. FastAPI
+                # will still apply the route response_model when sending them.
                 return cast(R, json.loads(cached))
 
             result = await fn(*args, **kwargs)

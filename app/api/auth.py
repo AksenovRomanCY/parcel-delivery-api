@@ -1,4 +1,9 @@
-"""Authentication endpoints: register and login."""
+"""Authentication endpoints: register and login.
+
+These routes issue JWTs used when ``AUTH_REQUIRED=True``. They remain mounted
+in legacy session mode as well, which keeps local testing and gradual migration
+between ownership modes straightforward.
+"""
 
 import logging
 
@@ -22,7 +27,11 @@ async def register(
     body: UserRegister,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
-    """Register a new user and return a JWT access token."""
+    """Register a new user and return a JWT access token.
+
+    The service owns duplicate-email checks and password hashing; the route only
+    maps the validated request body to that service call.
+    """
     _user, token = await AuthService(db).register(body.email, body.password)
     return TokenResponse(access_token=token)
 
@@ -34,6 +43,10 @@ async def login(
     body: UserLogin,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
-    """Authenticate a user and return a JWT access token."""
+    """Authenticate a user and return a JWT access token.
+
+    Failed credential checks are raised as domain auth errors and formatted by
+    the shared exception handlers.
+    """
     _user, token = await AuthService(db).login(body.email, body.password)
     return TokenResponse(access_token=token)

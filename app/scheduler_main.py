@@ -29,6 +29,8 @@ def main() -> None:
     scheduler.start()
 
     def _shutdown() -> None:
+        # Signal handlers cannot await directly, so schedule async cleanup on
+        # the worker loop before stopping it.
         scheduler.shutdown()
         loop.create_task(_cleanup_and_stop())
 

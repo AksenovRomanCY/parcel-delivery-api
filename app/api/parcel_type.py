@@ -34,7 +34,12 @@ async def list_parcel_types(
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[ParcelTypeRead]:
-    """Return a paginated list of all available parcel types."""
+    """Return a paginated list of all available parcel types.
+
+    Parcel types are reference data, so the cache key deliberately ignores
+    session/JWT identity. Pagination is applied after fetching the small
+    reference set ordered by the service.
+    """
     svc = ParcelTypeService(db)
 
     total = await svc.total()

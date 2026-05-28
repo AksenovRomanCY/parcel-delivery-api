@@ -1,4 +1,9 @@
-"""Parcel ORM model."""
+"""Parcel ORM model.
+
+The model represents persisted shipment data. Validation constraints are kept
+both in Pydantic schemas and database check constraints so invalid data is
+rejected at the API boundary and by the database.
+"""
 
 from decimal import Decimal
 from uuid import uuid4
@@ -78,5 +83,7 @@ class Parcel(Base):
     )
 
     parcel_type: Mapped[ParcelType] = relationship(
+        # Relationship is loaded explicitly with selectinload in read paths to
+        # keep API serialization predictable in async SQLAlchemy.
         backref="parcels",
     )

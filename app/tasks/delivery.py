@@ -1,4 +1,9 @@
-"""Delivery cost recalculation task and Redis run metadata."""
+"""Delivery cost recalculation task and Redis run metadata.
+
+The scheduler and manual admin route both call this module. Redis is used for a
+coarse distributed lock plus lightweight "last run" metadata, while the
+database remains the source of truth for parcel prices.
+"""
 
 import logging
 import time
@@ -86,6 +91,8 @@ async def recalc_delivery_costs() -> int:
         return 0
 
     start = time.monotonic()
+    # Fetch one rate per run. All parcels updated in the same run use the same
+    # exchange rate, which makes the job easier to reason about and test.
     rate = await get_usd_rub_rate()
     updated = 0
 

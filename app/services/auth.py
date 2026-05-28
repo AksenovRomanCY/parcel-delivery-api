@@ -1,4 +1,8 @@
-"""Authentication service: registration and login."""
+"""Authentication service: registration and login.
+
+This service owns credential persistence and token issuance so routers never
+handle password hashes or JWT construction directly.
+"""
 
 import logging
 
@@ -20,7 +24,11 @@ class AuthService:
         self.session = session
 
     async def register(self, email: str, password: str) -> tuple[User, str]:
-        """Register a new user and return the user with an access token."""
+        """Register a new user and return the user with an access token.
+
+        Duplicate email checks happen before hashing to fail fast and return a
+        business error that the API layer maps to HTTP 400.
+        """
         existing = await self.session.scalar(select(User).where(User.email == email))
         if existing:
             raise BusinessError("Email already registered")
@@ -35,7 +43,11 @@ class AuthService:
         return user, token
 
     async def login(self, email: str, password: str) -> tuple[User, str]:
-        """Authenticate a user and return the user with an access token."""
+        """Authenticate a user and return the user with an access token.
+
+        Both unknown emails and wrong passwords produce the same error message
+        so callers cannot enumerate registered accounts.
+        """
         user = await self.session.scalar(select(User).where(User.email == email))
         if not user or not verify_password(password, user.hashed_password):
             raise UnauthorizedError("Invalid email or password")

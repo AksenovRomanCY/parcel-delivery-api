@@ -1,4 +1,8 @@
-"""Reusable SQLAlchemy query helpers for service classes."""
+"""Reusable SQLAlchemy query helpers for service classes.
+
+The base class is intentionally small. Feature-specific services should add
+business rules on top instead of pushing domain behavior into generic CRUD.
+"""
 
 from collections.abc import Iterable
 from typing import Generic, TypeVar
@@ -36,7 +40,6 @@ class CRUDBase(Generic[ModelT]):
         """
         self.session = session
 
-    # Helper
     async def _commit(self, *instances: ModelT) -> None:
         """Persist one or more ORM instances and refresh them.
 
@@ -47,17 +50,13 @@ class CRUDBase(Generic[ModelT]):
         Args:
             *instances: Arbitrary collection of ORM objects to be saved.
         """
-        # Stage instances for insertion / update.
+        # Stage instances for insertion/update and refresh them after commit so
+        # callers can safely read generated IDs/defaults immediately.
         self.session.add_all(instances)
-
-        # Flush changes and make them permanent.
         await self.session.commit()
-
-        # Pull any database-side modifications back into Python objects.
         for inst in instances:
             await self.session.refresh(inst)
 
-    # CRUDs:
     async def get(self, id_: str) -> ModelT | None:
         """Return a single row by primary key.
 
@@ -80,10 +79,10 @@ class CRUDBase(Generic[ModelT]):
         Returns:
             An iterable of ORM objects meeting the criteria.
         """
-        # Build a SELECT statement with optional WHERE clauses.
+        # Keep the generic helper limited to simple WHERE clauses; services can
+        # compose richer statements when they need joins, eager loading, or
+        # pagination.
         stmt = select(self.model).where(*filters)
-
-        # Execute and convert the scalar result to Python objects.
         result = await self.session.scalars(stmt)
         return result.all()
 

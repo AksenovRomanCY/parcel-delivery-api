@@ -31,7 +31,12 @@ def _error_response(
     status: int = 400,
     exc: Exception | None = None,
 ) -> JSONResponse:
-    """Return a structured JSON error response and log it."""
+    """Return a structured JSON error response and log it.
+
+    Every exception handler funnels through this helper so clients receive the
+    same envelope regardless of whether the error came from FastAPI validation,
+    authentication, authorization, or business rules.
+    """
     log.warning(
         "api_error: code=%s message=%s status=%s details=%s",
         code,
@@ -91,7 +96,11 @@ async def forbidden_error_handler(_request: Request, exc: Exception) -> JSONResp
 
 
 def register_exception_handlers(app: FastAPI) -> None:
-    """Register all custom exception handlers on the FastAPI app."""
+    """Register all custom exception handlers on the FastAPI app.
+
+    Registering domain exceptions here keeps service code independent from HTTP
+    response classes while still producing predictable status codes.
+    """
     app.add_exception_handler(Exception, internal_error_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(BusinessError, business_error_handler)

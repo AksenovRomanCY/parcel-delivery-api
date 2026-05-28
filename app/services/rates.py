@@ -1,4 +1,9 @@
-"""Fetch and cache the USD/RUB exchange rate used by delivery pricing."""
+"""Fetch and cache the USD/RUB exchange rate used by delivery pricing.
+
+The delivery job needs a currency rate but should not call the external API for
+every parcel. Rates are cached by UTC date in Redis and retried on transient
+HTTP failures.
+"""
 
 import logging
 from datetime import UTC, datetime
@@ -32,7 +37,11 @@ async def _fetch_rate_from_cbr() -> Decimal:
 
 
 async def get_usd_rub_rate() -> Decimal:
-    """Return today's USD/RUB rate, cached in Redis by date."""
+    """Return today's USD/RUB rate, cached in Redis by date.
+
+    Redis stores the rate as a string to preserve Decimal precision across
+    process boundaries.
+    """
     redis = get_redis()
     today = datetime.now(UTC).date().isoformat()
     key = KEY_TMPL.format(date=today)

@@ -12,10 +12,16 @@ ADMIN_PATH_PREFIXES = ("/tasks",)
 
 
 def _is_operation(value: object) -> bool:
+    """Return True when an OpenAPI path item value is an HTTP operation.
+
+    OpenAPI path objects also contain metadata-like keys, so callers need this
+    guard before mutating method-specific security configuration.
+    """
     return isinstance(value, dict) and "responses" in value
 
 
 def _auth_scheme_name() -> str:
+    """Return the security scheme name matching the configured auth mode."""
     return "BearerAuth" if settings.AUTH_REQUIRED else "SessionAuth"
 
 
@@ -37,6 +43,8 @@ def setup_custom_openapi(app: FastAPI) -> None:
             routes=app.routes,
         )
 
+        # FastAPI generates most of the schema. This block patches only the
+        # security schemes so docs match the runtime auth mode selected by env.
         components = schema.setdefault("components", {})
         security_schemes = components.setdefault("securitySchemes", {})
 

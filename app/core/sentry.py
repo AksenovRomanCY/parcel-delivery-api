@@ -9,7 +9,14 @@ from app.core.settings import settings
 
 
 def init_sentry(release: str = "1.0.0") -> None:
-    """Initialize Sentry if a DSN is configured."""
+    """Initialize Sentry if a DSN is configured.
+
+    Args:
+        release: Application or worker release identifier reported to Sentry.
+
+    Empty ``SENTRY_DSN`` intentionally makes this a no-op for local development
+    and tests.
+    """
     if not settings.SENTRY_DSN:
         return
     sentry_sdk.init(

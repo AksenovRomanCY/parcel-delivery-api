@@ -1,4 +1,9 @@
-"""Custom Prometheus metrics for business-level observability."""
+"""Custom Prometheus metrics for business-level observability.
+
+HTTP request metrics are installed by ``prometheus-fastapi-instrumentator`` in
+``app.main``. This module defines domain metrics that are easier to alert on:
+parcel creation volume and delivery-cost job behavior.
+"""
 
 from prometheus_client import Counter, Histogram
 

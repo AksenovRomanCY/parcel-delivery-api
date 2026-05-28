@@ -1,4 +1,8 @@
-"""Parcel type ORM model."""
+"""Parcel type ORM model.
+
+Parcel types are seed/reference data used when registering parcels and when
+filtering parcel lists. The API exposes them as read-only directory entries.
+"""
 
 from uuid import uuid4
 
@@ -13,7 +17,9 @@ class ParcelType(Base):
 
     Examples: "clothes", "electronics", "misc".
 
-    This model is typically used for UI dropdowns and filtering.
+    This model is typically used for UI dropdowns and filtering. Business code
+    checks this table before accepting new parcels to avoid dangling
+    ``parcel_type_id`` references.
     """
 
     __tablename__ = "parcel_type"

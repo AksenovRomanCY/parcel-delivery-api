@@ -1,4 +1,8 @@
-"""Schemas for reading parcel type directory entries."""
+"""Schemas for reading parcel type directory entries.
+
+Parcel types are reference data returned directly and nested inside parcel
+responses. The schema uses aliases consistently with other public payloads.
+"""
 
 from pydantic import BaseModel, Field
 from pydantic.alias_generators import to_camel
