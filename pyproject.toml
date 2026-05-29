@@ -6,7 +6,7 @@ authors = [
     {name = "Aksenov Roman",email = "aksenov.nsk.r.a@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13, <4.0"
+requires-python = ">=3.14, <4.0"
 dependencies = [
     "fastapi>=0.136.3,<1.0.0",
     "uvicorn[standard]>=0.48.0,<1.0.0",
@@ -33,6 +33,9 @@ dependencies = [
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry]
+package-mode = false
+
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.11.0"
 mypy = ">=2.1.0,<3.0.0"
@@ -43,7 +46,7 @@ bandit = {version = ">=1.8.0,<2.0.0", extras = ["toml"]}
 pytest-cov = "^7.1.0"
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 88
 
 [tool.ruff.lint]
@@ -57,7 +60,7 @@ known-first-party = ["app"]
 convention = "google"
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
