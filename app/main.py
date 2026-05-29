@@ -10,14 +10,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api import auth_router, health_router, parcel_router, parcel_type_router
 from app.api.errors import register_exception_handlers
 from app.core.logger import setup_logging
 from app.core.openapi import setup_custom_openapi
-from app.core.rate_limit import limiter
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.core.sentry import init_sentry
 from app.core.settings import settings
 from app.middlewares.session import assign_session_id
@@ -66,7 +65,7 @@ register_exception_handlers(app)
 # slowapi stores counters in Redis DB 1. Endpoint-specific limits are attached
 # on routers, while RATE_LIMIT_DEFAULT is a fallback for routes without one.
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # Advertise either Bearer JWT auth or legacy X-Session-Id in Swagger.
 setup_custom_openapi(app)

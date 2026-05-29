@@ -1,5 +1,6 @@
 """Shared pytest fixtures for the test suite."""
 
+import os
 import sys
 from collections.abc import Callable
 from decimal import Decimal
@@ -11,8 +12,18 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from app.models.parcel import Parcel
-from app.schemas.parcel import ParcelCreate
+os.environ.setdefault("DB_HOST", "127.0.0.1")
+os.environ.setdefault("DB_PORT", "3306")
+os.environ.setdefault("DB_USER", "root")
+os.environ.setdefault("DB_PASSWORD", "root")
+os.environ.setdefault("DB_NAME", "delivery_test")
+os.environ.setdefault("REDIS_HOST", "127.0.0.1")
+os.environ.setdefault("REDIS_PORT", "6379")
+os.environ.setdefault("REDIS_PASS", "yourstrongpass")
+os.environ.setdefault("JWT_SECRET_KEY", "change-me-in-tests-use-32-bytes-minimum")
+
+from app.models.parcel import Parcel  # noqa: E402
+from app.schemas.parcel import ParcelCreate  # noqa: E402
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 

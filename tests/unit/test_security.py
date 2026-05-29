@@ -2,8 +2,8 @@
 
 from datetime import UTC, datetime, timedelta
 
+import jwt
 import pytest
-from jose import jwt
 
 from app.core.security import (
     create_access_token,
@@ -63,7 +63,7 @@ def test_create_and_decode_token() -> None:
         "not-a-valid-token",
         jwt.encode(
             {"sub": "user-123", "exp": datetime.now(UTC) + timedelta(hours=1)},
-            "wrong-secret-key",
+            "wrong-secret-key-use-32-bytes-minimum",
             algorithm=settings.JWT_ALGORITHM,
         ),
     ],

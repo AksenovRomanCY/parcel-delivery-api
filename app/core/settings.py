@@ -86,7 +86,7 @@ class Settings(BaseSettings):
     # Authentication mode:
     # - AUTH_REQUIRED=false keeps the legacy anonymous X-Session-Id flow.
     # - AUTH_REQUIRED=true requires Bearer JWT and stores parcel ownership in user_id.
-    JWT_SECRET_KEY: str = "change-me-in-production"
+    JWT_SECRET_KEY: str = "change-me-in-production-use-32-bytes-minimum"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MIN: int = 30
     AUTH_REQUIRED: bool = False

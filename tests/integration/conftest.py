@@ -1,24 +1,17 @@
 """Integration test fixtures.
 
-Environment variables MUST be set before any app module is imported,
-because ``app.core.settings.Settings()`` is evaluated at import time.
+Environment variables are synchronized with the settings singleton before app
+runtime modules are used, because ``app.core.settings.Settings()`` may already
+have read local ``.env`` values during test collection.
 """
 
+import importlib
 import os
 import socket
-
-os.environ.setdefault("DB_HOST", "127.0.0.1")
-os.environ.setdefault("DB_PORT", "3306")
-os.environ.setdefault("DB_USER", "root")
-os.environ.setdefault("DB_PASSWORD", "root")
-os.environ.setdefault("DB_NAME", "delivery_test")
-os.environ.setdefault("REDIS_HOST", "127.0.0.1")
-os.environ.setdefault("REDIS_PORT", "6379")
-os.environ.setdefault("REDIS_PASS", "")
-
 import subprocess
+import sys
 from collections.abc import AsyncIterator, Callable
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 import pytest
@@ -29,9 +22,50 @@ from redis.exceptions import RedisError
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+if TYPE_CHECKING:
+    from app.core.settings import Settings
+
+
 _integration_marker = pytest.mark.integration
 _integration_asyncio_marker = pytest.mark.asyncio(loop_scope="session")
 ParcelPayloadFactory = Callable[..., dict[str, object]]
+
+
+def _configure_integration_environment() -> None:
+    """Force host-run integration tests to use services on localhost."""
+    env = {
+        "DB_HOST": "127.0.0.1",
+        "DB_PORT": "3306",
+        "DB_USER": "root",
+        "DB_PASSWORD": "root",
+        "DB_NAME": "delivery_test",
+        "REDIS_HOST": "127.0.0.1",
+        "REDIS_PORT": "6379",
+        "REDIS_PASS": "yourstrongpass",
+    }
+    os.environ.update(env)
+
+    settings_module = importlib.import_module("app.core.settings")
+    settings = cast("Settings", settings_module.__dict__["settings"])
+
+    settings.DB_HOST = env["DB_HOST"]
+    settings.DB_PORT = env["DB_PORT"]
+    settings.DB_USER = env["DB_USER"]
+    settings.DB_PASSWORD = env["DB_PASSWORD"]
+    settings.DB_NAME = env["DB_NAME"]
+    settings.REDIS_HOST = env["REDIS_HOST"]
+    settings.REDIS_PORT = int(env["REDIS_PORT"])
+    settings.REDIS_PASS = env["REDIS_PASS"]
+
+    db_session = importlib.import_module("app.db.session")
+    if getattr(db_session, "DATABASE_URL", None) != settings.DATABASE_URL:
+        importlib.reload(db_session)
+
+    if "app.db.deps" in sys.modules:
+        importlib.reload(sys.modules["app.db.deps"])
+
+
+_configure_integration_environment()
 
 
 def _strict_integration_mode() -> bool:

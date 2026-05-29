@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
 
 from app.core.settings import settings
 
@@ -66,5 +66,5 @@ def decode_token(token: str) -> str | None:
         )
         sub: str | None = payload.get("sub")
         return sub
-    except JWTError:
+    except jwt.PyJWTError:
         return None
