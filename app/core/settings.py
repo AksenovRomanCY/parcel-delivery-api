@@ -40,7 +40,7 @@ class Settings(BaseSettings):
         )
 
     # Redis configuration. DB 0 is used for application cache/rate data, while
-    # the slowapi limiter uses REDIS_RATE_LIMIT_URL (DB 1) to keep counters apart.
+    # REDIS_RATE_LIMIT_URL (DB 1) keeps rate-limit counters apart.
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASS: str = "yourstrongpass"
@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     CACHE_TTL_DEFAULT: int = 60
     CACHE_TTL_RATE: int = 600
 
-    # Rate limiting values use the slowapi/limits syntax, for example "20/minute".
+    # Rate limiting values use limits syntax, for example "20/minute".
     RATE_LIMIT_DEFAULT: str = "100/minute"
     RATE_LIMIT_CREATE: str = "20/minute"
     RATE_LIMIT_LIST: str = "60/minute"

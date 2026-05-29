@@ -1808,24 +1808,6 @@ tornado = ["tornado (>=6)"]
 unleash = ["UnleashClient (>=6.0.1)"]
 
 [[package]]
-name = "slowapi"
-version = "0.1.9"
-description = "A rate limiting extension for Starlette and Fastapi"
-optional = false
-python-versions = ">=3.7,<4.0"
-groups = ["main"]
-files = [
-    {file = "slowapi-0.1.9-py3-none-any.whl", hash = "sha256:cfad116cfb84ad9d763ee155c1e5c5cbf00b0d47399a769b227865f5df576e36"},
-    {file = "slowapi-0.1.9.tar.gz", hash = "sha256:639192d0f1ca01b1c6d95bf6c71d794c3a9ee189855337b4821f7f457dddad77"},
-]
-
-[package.dependencies]
-limits = ">=2.3"
-
-[package.extras]
-redis = ["redis (>=3.4.1,<4.0.0)"]
-
-[[package]]
 name = "sqlalchemy"
 version = "2.0.50"
 description = "Database Abstraction Library"
@@ -2450,4 +2432,4 @@ dev = ["pytest", "setuptools"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14, <4.0"
-content-hash = "cbbc2b7f01d5ba51b30973d232500d73a115f879922237482111aa65ae5d01ea"
+content-hash = "d869bcb11997765bd948246328ba7eae89fea58f6e481947f7170cc3093f8adc"

@@ -2,14 +2,11 @@
 
 import json
 from collections.abc import Callable
-from types import SimpleNamespace
-from typing import cast
 
 import pytest
-from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
-from app.core.rate_limit import rate_limit_exceeded_handler
+from app.core.rate_limit import RateLimitExceeded, rate_limit_exceeded_handler
 
 RequestFactory = Callable[..., Request]
 
@@ -21,7 +18,7 @@ async def test_rate_limit_exceeded_handler_returns_stable_json(
     """Rate-limit failures should keep the public 429 JSON shape stable."""
     # Arrange
     request = request_factory()
-    exc = cast(RateLimitExceeded, SimpleNamespace(detail="20 per 1 minute"))
+    exc = RateLimitExceeded("20 per 1 minute")
 
     # Act
     response = await rate_limit_exceeded_handler(request, exc)
