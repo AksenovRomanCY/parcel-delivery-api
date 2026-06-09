@@ -17,6 +17,7 @@ from app.api.errors import register_exception_handlers
 from app.core.logger import setup_logging
 from app.core.openapi import setup_custom_openapi
 from app.core.rate_limit import RateLimitExceeded, limiter, rate_limit_exceeded_handler
+from app.core.security import validate_jwt_secret
 from app.core.sentry import init_sentry
 from app.core.settings import settings
 from app.middlewares.session import assign_session_id
@@ -27,6 +28,7 @@ from app.version import __version__
 # Initialize process-wide integrations before the app starts accepting requests.
 # Sentry is a no-op unless SENTRY_DSN is configured.
 setup_logging()
+validate_jwt_secret()
 init_sentry(release=__version__)
 
 

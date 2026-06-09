@@ -69,6 +69,26 @@ async def test_get_owner_id_requires_token_when_auth_required(
         await get_owner_id(request, token=None)
 
 
+@pytest.mark.asyncio
+async def test_get_owner_id_rejects_missing_required_scope(
+    monkeypatch: pytest.MonkeyPatch,
+    request_factory: RequestFactory,
+) -> None:
+    """Owner dependency should reject JWTs without the required scope."""
+    # Arrange
+    monkeypatch.setattr(settings, "AUTH_REQUIRED", True)
+    token = create_access_token("user-123", scopes=("parcels:read",))
+    request = _request_with_session(request_factory, "session-123")
+
+    # Act / Assert
+    with pytest.raises(UnauthorizedError, match="Invalid or expired token"):
+        await get_owner_id(
+            request,
+            token=token,
+            required_scopes=("parcels:write",),
+        )
+
+
 def test_require_task_admin_token_accepts_configured_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

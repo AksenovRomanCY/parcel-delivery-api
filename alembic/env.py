@@ -8,7 +8,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.core.settings import settings
 from app.db.base import Base
-from app.models import parcel, parcel_type, user  # noqa
+from app.models import parcel, parcel_type, refresh_token, user  # noqa
 
 pymysql.install_as_MySQLdb()
 

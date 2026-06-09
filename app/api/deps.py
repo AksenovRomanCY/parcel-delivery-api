@@ -6,13 +6,14 @@ That mode switch is centralized in `get_owner_id`.
 """
 
 import logging
+from collections.abc import Iterable
 from secrets import compare_digest
 
 from fastapi import Depends, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.exceptions import ForbiddenError, UnauthorizedError
-from app.core.security import decode_token
+from app.core.security import TokenClaims, decode_token
 from app.core.settings import settings
 
 log = logging.getLogger(__name__)
@@ -51,15 +52,28 @@ async def get_current_user_id(
     """
     if not token:
         raise UnauthorizedError("Missing authorization token")
-    user_id = decode_token(token)
-    if not user_id:
+    claims = decode_token(token)
+    if claims is None:
         raise UnauthorizedError("Invalid or expired token")
-    return user_id
+    return claims.sub
+
+
+async def get_current_claims(
+    token: str | None = Depends(oauth2_scheme),
+) -> TokenClaims:
+    """Return validated JWT claims for the current Bearer token."""
+    if not token:
+        raise UnauthorizedError("Missing authorization token")
+    claims = decode_token(token)
+    if claims is None:
+        raise UnauthorizedError("Invalid or expired token")
+    return claims
 
 
 async def get_owner_id(
     request: Request,
     token: str | None = Depends(oauth2_scheme),
+    required_scopes: Iterable[str] = (),
 ) -> str:
     """Return the ownership key used by parcel services.
 
@@ -69,10 +83,31 @@ async def get_owner_id(
     if settings.AUTH_REQUIRED:
         # JWT mode stores parcel ownership in Parcel.user_id and requires a
         # Bearer token for every protected parcel operation.
-        return await get_current_user_id(token)
+        if not token:
+            raise UnauthorizedError("Missing authorization token")
+        claims = decode_token(token, required_scopes=required_scopes)
+        if claims is None:
+            raise UnauthorizedError("Invalid or expired token")
+        return claims.sub
     # Legacy mode stores parcel ownership in Parcel.session_id and relies on
     # session middleware to create/propagate X-Session-Id.
     return get_session_id(request)
+
+
+async def get_parcel_reader_owner_id(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+) -> str:
+    """Return owner ID for parcel read endpoints with read-scope enforcement."""
+    return await get_owner_id(request, token, required_scopes=("parcels:read",))
+
+
+async def get_parcel_writer_owner_id(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+) -> str:
+    """Return owner ID for parcel write endpoints with write-scope enforcement."""
+    return await get_owner_id(request, token, required_scopes=("parcels:write",))
 
 
 def require_task_admin_token(

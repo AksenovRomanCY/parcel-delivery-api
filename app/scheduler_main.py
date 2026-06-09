@@ -8,6 +8,7 @@ import asyncio
 import signal
 
 from app.core.logger import setup_logging
+from app.core.security import validate_jwt_secret
 from app.core.sentry import init_sentry
 from app.redis_client import close_redis
 from app.tasks.scheduler import init_scheduler
@@ -21,6 +22,7 @@ def main() -> None:
     APScheduler to it, and ensures graceful shutdown on termination signals.
     """
     setup_logging()
+    validate_jwt_secret()
     init_sentry(release=__version__)
 
     loop = asyncio.new_event_loop()

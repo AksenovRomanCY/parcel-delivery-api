@@ -37,6 +37,11 @@ cp .env.example .env
 - **LOG_LEVEL** – Logging level (default: INFO; options: DEBUG, INFO, WARNING, ERROR)
 - **ENVIRONMENT** – Runtime environment (default: prod, can be set to dev to enable debug features)
 - **AUTH_REQUIRED** – Require JWT bearer tokens for parcel ownership instead of deprecated anonymous sessions (default: true)
+- **JWT_ACCESS_TOKEN_EXPIRE_MIN** – Access token lifetime in minutes (default: 15)
+- **JWT_REFRESH_TOKEN_EXPIRE_DAYS** – Refresh token lifetime in days (default: 30)
+- **JWT_ISSUER** – Issuer claim expected in access tokens
+- **JWT_AUDIENCE** – Audience claim expected in access tokens
+- **REFRESH_COOKIE_NAME / CSRF_COOKIE_NAME / CSRF_HEADER_NAME** – Cookie and header names for refresh rotation
 - **TASK_ADMIN_TOKEN** – Shared secret for manual operational endpoints. Empty disables manual task triggers.
 
 ## Example .env File
@@ -56,11 +61,20 @@ REDIS_PASS=yourstrongpass
 
 LOG_LEVEL=INFO
 ENVIRONMENT=prod
+JWT_ACCESS_TOKEN_EXPIRE_MIN=15
+JWT_REFRESH_TOKEN_EXPIRE_DAYS=30
+JWT_ISSUER=parcel-delivery-api
+JWT_AUDIENCE=parcel-delivery-clients
+REFRESH_COOKIE_NAME=refresh_token
+CSRF_COOKIE_NAME=refresh_csrf
+CSRF_HEADER_NAME=X-CSRF-Token
 AUTH_REQUIRED=true
 TASK_ADMIN_TOKEN=
 ```
 
-Note: Default values in .env.example are suitable for running via Docker Compose. For production, use secure passwords and adjust the configuration as needed.
+Note: Default infrastructure values in .env.example are suitable for running via
+Docker Compose, but `JWT_SECRET_KEY` must be replaced with a private 32+
+character value before startup in `ENVIRONMENT=prod`.
 
 ## Launching
 The docker-compose.yml file defines six services:

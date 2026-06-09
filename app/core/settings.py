@@ -8,6 +8,9 @@ from decimal import Decimal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Sentinel default is intentionally rejected during production startup.
+DEFAULT_JWT_SECRET_KEY = "change-me-in-production-use-32-bytes-minimum"  # nosec B105
+
 
 class Settings(BaseSettings):
     """Typed application settings pulled from environment or `.env`.
@@ -86,9 +89,15 @@ class Settings(BaseSettings):
     # Authentication mode:
     # - AUTH_REQUIRED=true requires Bearer JWT and stores parcel ownership in user_id.
     # - AUTH_REQUIRED=false keeps the deprecated anonymous X-Session-Id flow.
-    JWT_SECRET_KEY: str = "change-me-in-production-use-32-bytes-minimum"
+    JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MIN: int = 30
+    JWT_ACCESS_TOKEN_EXPIRE_MIN: int = 15
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    JWT_ISSUER: str = "parcel-delivery-api"
+    JWT_AUDIENCE: str = "parcel-delivery-clients"
+    REFRESH_COOKIE_NAME: str = "refresh_token"
+    CSRF_COOKIE_NAME: str = "refresh_csrf"
+    CSRF_HEADER_NAME: str = "X-CSRF-Token"
     AUTH_REQUIRED: bool = True
 
     # Operational shared-secret for admin-only endpoints such as manual task

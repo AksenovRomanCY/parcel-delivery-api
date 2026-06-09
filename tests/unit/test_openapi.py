@@ -14,6 +14,10 @@ def _sample_app() -> FastAPI:
     async def login() -> dict[str, object]:
         return {}
 
+    @app.post("/auth/logout-all")
+    async def logout_all() -> dict[str, object]:
+        return {}
+
     @app.get("/health")
     async def health() -> dict[str, object]:
         return {}
@@ -28,6 +32,10 @@ def _sample_app() -> FastAPI:
 
     @app.post("/parcels")
     async def parcels() -> dict[str, object]:
+        return {}
+
+    @app.get("/parcel-types")
+    async def parcel_types() -> dict[str, object]:
         return {}
 
     setup_custom_openapi(app)
@@ -51,6 +59,10 @@ def test_openapi_marks_public_admin_and_session_paths(
     assert "security" not in schema["paths"]["/auth/login"]["post"]
     assert "security" not in schema["paths"]["/health"]["get"]
     assert "security" not in schema["paths"]["/metrics"]["get"]
+    assert "security" not in schema["paths"]["/parcel-types"]["get"]
+    assert schema["paths"]["/auth/logout-all"]["post"]["security"] == [
+        {"BearerAuth": []}
+    ]
     assert schema["paths"]["/tasks/recalc-delivery"]["post"]["security"] == [
         {"AdminToken": []}
     ]

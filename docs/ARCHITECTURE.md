@@ -16,7 +16,7 @@ The Parcel Delivery API follows a layered architecture with these key layers:
 * **External Integrations**: Fetching USD→RUB rate via Central Bank API using `httpx` and retry logic (`tenacity`).
 * **Redis (Cache/Sync/Rate Limits)**: Caching API responses and exchange rates, task coordination via Redis locks, and `limits` counters.
 * **Background Scheduler (APScheduler)**: Periodic recalculation of delivery costs in a separate process.
-* **Security**: JWT auth by default; deprecated legacy anonymous sessions can be enabled with `AUTH_REQUIRED=false`; operational task endpoints use `X-Admin-Token`.
+* **Security**: JWT auth by default with rotating HTTP-only refresh cookies, CSRF-protected refresh/logout endpoints, and scope checks; deprecated legacy anonymous sessions can be enabled with `AUTH_REQUIRED=false`; operational task endpoints use `X-Admin-Token`.
 * **Observability**: Structured logging, Prometheus metrics, and optional Sentry.
 * **Configuration (Pydantic BaseSettings)**: `.env` or environment variable-based configuration for deployment flexibility.
 
@@ -72,7 +72,8 @@ Response format is standardized using FastAPI’s `response_model`. Error handle
 
 The code supports two ownership modes during the auth migration:
 
-* `AUTH_REQUIRED=true` (default): clients authenticate with `/auth/register` or `/auth/login`
+* `AUTH_REQUIRED=true` (default): clients authenticate with `/auth/register` or
+  `/auth/login`, receive a short-lived access token plus refresh/CSRF cookies,
   and pass `Authorization: Bearer <token>`; parcel ownership is stored in
   `parcel.user_id`.
 * `AUTH_REQUIRED=false` (deprecated): the `assign_session_id` middleware accepts
@@ -123,7 +124,18 @@ user. They require the shared `X-Admin-Token` header and are disabled when
 * Saves session to `request.state`
 * Includes session plus `Deprecation` and `Sunset` in response headers
 * Installed only when `AUTH_REQUIRED=false`
-* In JWT mode, `OAuth2PasswordBearer` extracts a token and `decode_token` returns the user ID
+* In JWT mode, `OAuth2PasswordBearer` extracts a token and `decode_token`
+  validates issuer, audience, expiration, role, and scopes before returning
+  typed claims.
+
+## Refresh Tokens
+
+* Refresh tokens are stored only as SHA-256 hashes in `refresh_token`
+* Each login/register creates a new token family
+* `POST /auth/refresh` rotates the current token and revokes the previous token
+* Reusing a revoked refresh token revokes the entire family
+* `POST /auth/logout` revokes the current token
+* `POST /auth/logout-all` revokes all refresh tokens for the authenticated user
 
 ## Logging
 

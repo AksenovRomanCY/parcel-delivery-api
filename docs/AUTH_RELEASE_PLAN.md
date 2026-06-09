@@ -29,6 +29,8 @@
 ## v1.3.0 - Stronger JWT and refresh rotation
 
 - Add refresh tokens through an HTTP-only cookie.
+- Pair refresh tokens with a readable CSRF cookie and require
+  `X-CSRF-Token` for `/auth/refresh` and `/auth/logout`.
 - Keep access tokens in JSON responses from `/auth/register` and `/auth/login`.
 - Add endpoints:
   - `POST /auth/refresh`;
@@ -46,6 +48,14 @@
 - Add minimum scopes: `parcels:read` and `parcels:write`.
 - Fail startup in production when `JWT_SECRET_KEY` is default or too short.
 - Move legacy `X-Session-Id` documentation into migration/deprecation notes.
+- Preserve the v1.2.0 compatibility-test shape:
+  - unit parcel-service tests stay in legacy mode by default;
+  - new JWT-mode service tests must opt into `AUTH_REQUIRED=true`;
+  - integration `auth_context` keeps the session-scoped event loop and reads
+    user IDs from typed JWT claims.
+- Update integration cleanup order to delete `refresh_token`, then `parcel`,
+  then `user` so foreign-key constraints remain satisfied.
+- Keep `/parcel-types` public and `/tasks/*` protected by `X-Admin-Token`.
 
 ## v2.0.0 - Dedicated OAuth2.1/OIDC auth server
 

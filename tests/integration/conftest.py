@@ -44,6 +44,7 @@ def _configure_integration_environment() -> None:
         "REDIS_PORT": "6379",
         "REDIS_PASS": "yourstrongpass",
         "AUTH_REQUIRED": "true",
+        "ENVIRONMENT": "test",
     }
     os.environ.update(env)
 
@@ -59,6 +60,7 @@ def _configure_integration_environment() -> None:
     settings.REDIS_PORT = int(env["REDIS_PORT"])
     settings.REDIS_PASS = env["REDIS_PASS"]
     settings.AUTH_REQUIRED = True
+    settings.ENVIRONMENT = env["ENVIRONMENT"]
 
     db_session = importlib.import_module("app.db.session")
     if getattr(db_session, "DATABASE_URL", None) != settings.DATABASE_URL:
@@ -190,6 +192,9 @@ async def _flush_stores() -> None:
 
     # Clean transactional tables for test isolation
     async with AsyncSessionLocal() as session:
+        await session.execute(
+            __import__("sqlalchemy").text("DELETE FROM refresh_token")
+        )
         await session.execute(__import__("sqlalchemy").text("DELETE FROM parcel"))
         await session.execute(__import__("sqlalchemy").text("DELETE FROM user"))
         await session.commit()
@@ -198,6 +203,16 @@ async def _flush_stores() -> None:
 @pytest_asyncio.fixture(loop_scope="session")
 async def client() -> AsyncIterator[AsyncClient]:
     """Async HTTP client wired to the FastAPI ASGI app."""
+    from app.main import app
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+
+@pytest_asyncio.fixture
+async def isolated_client() -> AsyncIterator[AsyncClient]:
+    """Function-scoped ASGI client for cookie-isolated auth flows."""
     from app.main import app
 
     transport = ASGITransport(app=app)
@@ -223,9 +238,9 @@ async def auth_context(client: AsyncClient) -> AuthContext:
     )
     assert resp.status_code == 201
     token = resp.json()["access_token"]
-    user_id = decode_token(token)
-    assert user_id is not None
-    return {"Authorization": f"Bearer {token}"}, user_id
+    claims = decode_token(token)
+    assert claims is not None
+    return {"Authorization": f"Bearer {token}"}, claims.sub
 
 
 @pytest.fixture

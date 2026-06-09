@@ -21,6 +21,7 @@ os.environ.setdefault("REDIS_HOST", "127.0.0.1")
 os.environ.setdefault("REDIS_PORT", "6379")
 os.environ.setdefault("REDIS_PASS", "yourstrongpass")
 os.environ.setdefault("JWT_SECRET_KEY", "change-me-in-tests-use-32-bytes-minimum")
+os.environ.setdefault("ENVIRONMENT", "test")
 
 from app.models.parcel import Parcel  # noqa: E402
 from app.schemas.parcel import ParcelCreate  # noqa: E402

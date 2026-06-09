@@ -14,6 +14,9 @@ This section describes how to work with the Parcel Delivery API: key endpoints, 
 
 * `POST /auth/register` – Create a user and receive a JWT access token.
 * `POST /auth/login` – Authenticate and receive a JWT access token.
+* `POST /auth/refresh` – Rotate the refresh cookie and receive a new access token.
+* `POST /auth/logout` – Revoke the current refresh token and clear auth cookies.
+* `POST /auth/logout-all` – Revoke all refresh tokens for the authenticated user.
 * `GET /parcel-types` – Retrieve all available parcel types.
 * `POST /parcels` – Register a new parcel with specified attributes.
 * `GET /parcels` – List all parcels owned by the authenticated user (with filtering & pagination).
@@ -28,7 +31,14 @@ The service uses JWT Bearer authentication by default (`AUTH_REQUIRED=true`).
 
 Clients call `/auth/register` or `/auth/login`, then send
 `Authorization: Bearer <token>` for parcel endpoints. Parcel ownership is based
-on the JWT subject.
+on the JWT subject. Access tokens are short-lived (15 minutes by default).
+
+Registration and login also set a rotating HTTP-only `refresh_token` cookie and
+a readable `refresh_csrf` cookie. Clients refresh access tokens with
+`POST /auth/refresh` and must echo the CSRF cookie value in the `X-CSRF-Token`
+header. `POST /auth/logout` uses the same CSRF header and revokes the current
+refresh token. `POST /auth/logout-all` uses the Bearer access token and revokes
+all refresh tokens for the user.
 
 The legacy anonymous `X-Session-Id` flow is still available only when
 `AUTH_REQUIRED=false`. That mode is deprecated and responses include
@@ -49,7 +59,7 @@ All response models use **camelCase** for JSON fields. Example: `weight_kg` in P
 
 ## POST /auth/register
 
-Registers a user and returns a JWT access token.
+Registers a user, returns a JWT access token, and sets refresh/CSRF cookies.
 
 ```json
 {
@@ -68,7 +78,36 @@ Registers a user and returns a JWT access token.
 ## POST /auth/login
 
 Authenticates an existing user and returns the same token response shape as
-registration.
+registration. It also rotates into a new refresh-token family.
+
+## POST /auth/refresh
+
+Rotates the current refresh token and returns a new access token.
+
+```http
+POST /auth/refresh HTTP/1.1
+Cookie: refresh_token=...; refresh_csrf=...
+X-CSRF-Token: ...
+```
+
+## POST /auth/logout
+
+Revokes the current refresh token and clears refresh/CSRF cookies.
+
+```http
+POST /auth/logout HTTP/1.1
+Cookie: refresh_token=...; refresh_csrf=...
+X-CSRF-Token: ...
+```
+
+## POST /auth/logout-all
+
+Revokes all refresh tokens for the authenticated user.
+
+```http
+POST /auth/logout-all HTTP/1.1
+Authorization: Bearer ...
+```
 
 ---
 

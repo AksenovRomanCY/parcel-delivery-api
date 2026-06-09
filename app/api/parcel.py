@@ -10,7 +10,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_owner_id
+from app.api.deps import get_parcel_reader_owner_id, get_parcel_writer_owner_id
 from app.core.cache import redis_cache
 from app.core.exceptions import NotFoundError, UnauthorizedError
 from app.core.rate_limit import limiter
@@ -44,7 +44,7 @@ async def register_parcel(
     request: Request,
     body: ParcelCreate,
     db: AsyncSession = Depends(get_db),
-    owner_id: str = Depends(get_owner_id),
+    owner_id: str = Depends(get_parcel_writer_owner_id),
 ) -> ParcelCreateResponse:
     """Register a new parcel and persist it to the database.
 
@@ -70,7 +70,7 @@ async def list_parcels(
     pagination: PaginationParams = Depends(),
     filters: ParcelFilterParams = Depends(),
     db: AsyncSession = Depends(get_db),
-    owner_id: str = Depends(get_owner_id),
+    owner_id: str = Depends(get_parcel_reader_owner_id),
 ) -> PaginatedResponse[ParcelRead]:
     """List parcels belonging to the current user/session, with optional filters.
 
@@ -103,7 +103,7 @@ async def get_parcel(
     request: Request,
     parcel_id: str,
     db: AsyncSession = Depends(get_db),
-    owner_id: str = Depends(get_owner_id),
+    owner_id: str = Depends(get_parcel_reader_owner_id),
 ) -> Parcel:
     """Retrieve a single parcel by ID, ensuring it belongs to the caller.
 

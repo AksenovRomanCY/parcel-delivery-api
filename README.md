@@ -1,6 +1,6 @@
 # Parcel Delivery API
 
-**Parcel Delivery API** is a FastAPI microservice for registering and tracking parcel deliveries. It uses JWT Bearer authentication by default, keeps the legacy anonymous `X-Session-Id` mode only as a deprecated compatibility fallback, calculates delivery cost in Russian rubles from parcel weight/value and the current USD/RUB rate, and exposes operational visibility through Prometheus metrics, structured logs, and optional Sentry.
+**Parcel Delivery API** is a FastAPI microservice for registering and tracking parcel deliveries. It uses short-lived JWT Bearer authentication with rotating refresh-token cookies by default, keeps the legacy anonymous `X-Session-Id` mode only as a deprecated compatibility fallback, calculates delivery cost in Russian rubles from parcel weight/value and the current USD/RUB rate, and exposes operational visibility through Prometheus metrics, structured logs, and optional Sentry.
 
 ## Core Functionality
 
@@ -9,7 +9,7 @@
 - **List of Parcels**: Users can fetch their own parcels, with filtering by type and presence of delivery cost, along with pagination.
 - **Parcel Details**: Each registered parcel includes detailed information, including the calculated delivery cost once it becomes available.
 - **Background Tasks**: The service periodically recalculates delivery costs for new parcels and caches the current USD/RUB exchange rate. A manual endpoint is available for operators when `TASK_ADMIN_TOKEN` is configured.
-- **Security and Observability**: Rate limiting is backed by Redis, JWT auth is enabled by default, `/metrics` exposes Prometheus-compatible metrics, and Sentry can be enabled with `SENTRY_DSN`.
+- **Security and Observability**: Rate limiting is backed by Redis, JWT auth is enabled by default with refresh rotation and CSRF-protected cookie endpoints, `/metrics` exposes Prometheus-compatible metrics, and Sentry can be enabled with `SENTRY_DSN`.
 
 ## Technology Stack
 
@@ -20,7 +20,7 @@
 | Cache & Sync          | Redis 8 (caching dictionaries, exchange rates, locking)     |
 | Background Tasks      | APScheduler (recalculates delivery costs every 5 minutes)   |
 | Validation & Schemas  | Pydantic 2 (BaseModel for input/output validation)          |
-| Auth & Limits         | JWT Bearer auth by default, deprecated `X-Session-Id` fallback, Redis-backed `limits` rate limiting |
+| Auth & Limits         | JWT Bearer auth, rotating HTTP-only refresh cookies, deprecated `X-Session-Id` fallback, Redis-backed `limits` rate limiting |
 | Observability         | Structured logging, Prometheus metrics, optional Sentry           |
 
 Operational note: `POST /tasks/recalc-delivery` requires `X-Admin-Token` and is
@@ -56,7 +56,9 @@ git clone https://github.com/AksenovRomanCY/parcel-delivery-api.git && cd parcel
 cp .env.example .env
 ```
 
-Edit .env as required (e.g., set the DB password). See docs/INSTALLATION.md for all options.
+Edit `.env` before starting the app. At minimum, replace `JWT_SECRET_KEY` with
+a private 32+ character value; production startup rejects the default secret.
+See docs/INSTALLATION.md for all options.
 
 ### 3. Launch the service with Docker Compose
 
