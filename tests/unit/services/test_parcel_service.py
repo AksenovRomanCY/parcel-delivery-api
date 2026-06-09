@@ -8,12 +8,19 @@ from uuid import uuid4
 import pytest
 
 from app.core.exceptions import BusinessError, NotFoundError, UnauthorizedError
+from app.core.settings import settings
 from app.models.parcel import Parcel
 from app.schemas.parcel import ParcelCreate, ParcelFilterParams
 from app.services.parcel import ParcelService
 
 ParcelCreateFactory = Callable[..., ParcelCreate]
 ParcelFactory = Callable[..., Parcel]
+
+
+@pytest.fixture(autouse=True)
+def legacy_auth_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep legacy ownership tests explicit after JWT became the app default."""
+    monkeypatch.setattr(settings, "AUTH_REQUIRED", False)
 
 
 def _set_list_result(
