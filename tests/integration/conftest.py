@@ -211,7 +211,7 @@ def session_id() -> str:
     return str(uuid4())
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def auth_context(client: AsyncClient) -> AuthContext:
     """Register a JWT user and return auth headers plus the user ID."""
     from app.core.security import decode_token
