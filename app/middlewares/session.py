@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 from fastapi import Request, Response
 
 SESSION_HEADER = "X-Session-Id"
+SUNSET_HEADER = "Wed, 09 Dec 2026 00:00:00 GMT"
 
 log = logging.getLogger(__name__)
 
@@ -59,5 +60,7 @@ async def assign_session_id(
 
     # Reflect the session ID in the response header.
     response.headers[SESSION_HEADER] = session
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = SUNSET_HEADER
 
     return response

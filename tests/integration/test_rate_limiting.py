@@ -4,13 +4,13 @@ from collections.abc import Callable
 
 from httpx import AsyncClient
 
-SESSION_HEADER = "X-Session-Id"
 ParcelPayloadFactory = Callable[..., dict[str, object]]
+AuthContext = tuple[dict[str, str], str]
 
 
 async def test_rate_limit_post_parcels_returns_429(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_type_id: str,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
@@ -22,7 +22,7 @@ async def test_rate_limit_post_parcels_returns_429(
         weight_kg="1.000",
         declared_value_usd="10.00",
     )
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
 
     # Act
     for _ in range(20):
@@ -50,12 +50,11 @@ async def test_recalc_requires_admin_token(
 
 async def test_rate_limit_recalc_returns_429(
     client: AsyncClient,
-    session_id: str,
     admin_headers: dict[str, str],
 ) -> None:
     """POST /tasks/recalc-delivery should return 429 after 5 requests."""
     # Arrange
-    headers = {SESSION_HEADER: session_id, **admin_headers}
+    headers = admin_headers
 
     # Act
     for _ in range(5):
@@ -69,18 +68,17 @@ async def test_rate_limit_recalc_returns_429(
 
 async def test_rate_limit_independent_endpoints(
     client: AsyncClient,
-    session_id: str,
-    parcel_type_id: str,
+    auth_context: AuthContext,
     admin_headers: dict[str, str],
 ) -> None:
     """Rate limits on one endpoint do not affect another."""
     # Arrange
-    headers = {SESSION_HEADER: session_id, **admin_headers}
+    auth_headers, _user_id = auth_context
     for _ in range(5):
-        await client.post("/tasks/recalc-delivery", headers=headers)
+        await client.post("/tasks/recalc-delivery", headers=admin_headers)
 
     # Act
-    resp = await client.get("/parcels", headers=headers)
+    resp = await client.get("/parcels", headers=auth_headers)
 
     # Assert
     assert resp.status_code == 200

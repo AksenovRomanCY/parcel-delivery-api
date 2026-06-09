@@ -14,9 +14,9 @@ The Parcel Delivery API follows a layered architecture with these key layers:
 * **Business Logic (Services)**: Core operations on parcels, auth, parcel types, and rate lookup.
 * **Data Access Layer (SQLAlchemy)**: Async ORM models, MySQL access, DB constraints, and Alembic migrations.
 * **External Integrations**: Fetching USD→RUB rate via Central Bank API using `httpx` and retry logic (`tenacity`).
-* **Redis (Cache/Sync/Rate Limits)**: Caching API responses and exchange rates, task coordination via Redis locks, and slowapi counters.
+* **Redis (Cache/Sync/Rate Limits)**: Caching API responses and exchange rates, task coordination via Redis locks, and `limits` counters.
 * **Background Scheduler (APScheduler)**: Periodic recalculation of delivery costs in a separate process.
-* **Security**: Legacy anonymous sessions or JWT auth controlled by `AUTH_REQUIRED`; operational task endpoints use `X-Admin-Token`.
+* **Security**: JWT auth by default; deprecated legacy anonymous sessions can be enabled with `AUTH_REQUIRED=false`; operational task endpoints use `X-Admin-Token`.
 * **Observability**: Structured logging, Prometheus metrics, and optional Sentry.
 * **Configuration (Pydantic BaseSettings)**: `.env` or environment variable-based configuration for deployment flexibility.
 
@@ -39,7 +39,7 @@ app/
 ## API Layer
 
 * Main app is defined in `main.py`
-* Middleware sets `X-Session-Id` only when `AUTH_REQUIRED=false`
+* Middleware sets deprecated `X-Session-Id` only when `AUTH_REQUIRED=false`
 * Routers:
 
   * `/auth`: register/login and return JWT access tokens
@@ -70,13 +70,14 @@ Response format is standardized using FastAPI’s `response_model`. Error handle
 
 ## Ownership and Authentication
 
-The code supports two ownership modes:
+The code supports two ownership modes during the auth migration:
 
-* `AUTH_REQUIRED=false` (default): the `assign_session_id` middleware accepts or
-  generates `X-Session-Id`, and parcel ownership is stored in `parcel.session_id`.
-* `AUTH_REQUIRED=true`: clients authenticate with `/auth/register` or `/auth/login`
+* `AUTH_REQUIRED=true` (default): clients authenticate with `/auth/register` or `/auth/login`
   and pass `Authorization: Bearer <token>`; parcel ownership is stored in
   `parcel.user_id`.
+* `AUTH_REQUIRED=false` (deprecated): the `assign_session_id` middleware accepts
+  or generates `X-Session-Id`, and parcel ownership is stored in
+  `parcel.session_id`.
 
 Route dependencies return a generic `owner_id`, so services do not need to know
 how the caller was identified. `POST /parcels` returns that same `owner_id` in
@@ -118,9 +119,9 @@ user. They require the shared `X-Admin-Token` header and are disabled when
 
 ## Session Middleware and JWT
 
-* Assigns `X-Session-Id` per request if absent (UUID4)
+* Assigns deprecated `X-Session-Id` per request if absent (UUID4)
 * Saves session to `request.state`
-* Includes session in response headers
+* Includes session plus `Deprecation` and `Sunset` in response headers
 * Installed only when `AUTH_REQUIRED=false`
 * In JWT mode, `OAuth2PasswordBearer` extracts a token and `decode_token` returns the user ID
 

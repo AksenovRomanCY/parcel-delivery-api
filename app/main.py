@@ -5,6 +5,7 @@ logging/Sentry, app lifespan, metrics, exception handlers, rate limiting,
 authentication mode, OpenAPI schema, and routers are all connected here.
 """
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -21,11 +22,12 @@ from app.core.settings import settings
 from app.middlewares.session import assign_session_id
 from app.redis_client import close_redis
 from app.tasks.routes import router as task_router
+from app.version import __version__
 
 # Initialize process-wide integrations before the app starts accepting requests.
 # Sentry is a no-op unless SENTRY_DSN is configured.
 setup_logging()
-init_sentry(release="0.1.0")
+init_sentry(release=__version__)
 
 
 @asynccontextmanager
@@ -43,7 +45,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 # remains the single interactive entry point for local exploration.
 app = FastAPI(
     title="Parcel-Delivery-API",
-    version="0.1.0",
+    version=__version__,
     docs_url="/docs",  # Swagger UI available at /docs
     redoc_url=None,  # Disable ReDoc
     openapi_url="/openapi.json",  # OpenAPI schema endpoint
@@ -73,6 +75,10 @@ setup_custom_openapi(app)
 # AUTH_REQUIRED=True, parcel ownership moves to JWT user_id and this middleware
 # is not installed.
 if not settings.AUTH_REQUIRED:
+    logging.getLogger(__name__).warning(
+        "legacy_session_auth_enabled: X-Session-Id is deprecated and will be "
+        "removed in v2.0.0"
+    )
     app.middleware("http")(assign_session_id)
 
 # Mount routers from narrow domains. Keep route-level concerns inside app/api/*

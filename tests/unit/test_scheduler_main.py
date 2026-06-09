@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app import scheduler_main
+from app.version import __version__
 
 
 @pytest.mark.asyncio
@@ -51,7 +52,7 @@ async def test_main_wires_scheduler_lifecycle(
 
     # Assert
     setup_logging.assert_called_once_with()
-    init_sentry.assert_called_once_with(release="0.1.0")
+    init_sentry.assert_called_once_with(release=__version__)
     set_event_loop.assert_called_once_with(loop)
     init_scheduler.assert_called_once_with(loop)
     scheduler.start.assert_called_once_with()

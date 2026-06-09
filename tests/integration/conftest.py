@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 _integration_marker = pytest.mark.integration
 _integration_asyncio_marker = pytest.mark.asyncio(loop_scope="session")
 ParcelPayloadFactory = Callable[..., dict[str, object]]
+AuthContext = tuple[dict[str, str], str]
 
 
 def _configure_integration_environment() -> None:
@@ -42,6 +43,7 @@ def _configure_integration_environment() -> None:
         "REDIS_HOST": "127.0.0.1",
         "REDIS_PORT": "6379",
         "REDIS_PASS": "yourstrongpass",
+        "AUTH_REQUIRED": "true",
     }
     os.environ.update(env)
 
@@ -56,6 +58,7 @@ def _configure_integration_environment() -> None:
     settings.REDIS_HOST = env["REDIS_HOST"]
     settings.REDIS_PORT = int(env["REDIS_PORT"])
     settings.REDIS_PASS = env["REDIS_PASS"]
+    settings.AUTH_REQUIRED = True
 
     db_session = importlib.import_module("app.db.session")
     if getattr(db_session, "DATABASE_URL", None) != settings.DATABASE_URL:
@@ -206,6 +209,23 @@ async def client() -> AsyncIterator[AsyncClient]:
 def session_id() -> str:
     """Unique session ID for test isolation."""
     return str(uuid4())
+
+
+@pytest_asyncio.fixture
+async def auth_context(client: AsyncClient) -> AuthContext:
+    """Register a JWT user and return auth headers plus the user ID."""
+    from app.core.security import decode_token
+
+    email = f"user-{uuid4()}@example.com"
+    resp = await client.post(
+        "/auth/register",
+        json={"email": email, "password": "securepass123"},
+    )
+    assert resp.status_code == 201
+    token = resp.json()["access_token"]
+    user_id = decode_token(token)
+    assert user_id is not None
+    return {"Authorization": f"Bearer {token}"}, user_id
 
 
 @pytest.fixture

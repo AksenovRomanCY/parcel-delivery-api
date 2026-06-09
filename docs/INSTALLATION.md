@@ -4,7 +4,7 @@ This section describes how to deploy the **Parcel Delivery API** microservice us
 
 ## Prerequisites
 
-- **Docker & Docker Compose**: Ensure Docker is installed and running. Docker Compose version **3.8+** is required (as specified in `docker-compose.yml`).
+- **Docker & Docker Compose**: Ensure Docker is installed and running. Use the modern `docker compose` CLI.
 - **Source Code**: Clone the project repository:
 
 ```bash
@@ -36,7 +36,7 @@ cp .env.example .env
 ### Other Settings
 - **LOG_LEVEL** – Logging level (default: INFO; options: DEBUG, INFO, WARNING, ERROR)
 - **ENVIRONMENT** – Runtime environment (default: prod, can be set to dev to enable debug features)
-- **AUTH_REQUIRED** – Require JWT bearer tokens for parcel ownership instead of anonymous sessions (default: false)
+- **AUTH_REQUIRED** – Require JWT bearer tokens for parcel ownership instead of deprecated anonymous sessions (default: true)
 - **TASK_ADMIN_TOKEN** – Shared secret for manual operational endpoints. Empty disables manual task triggers.
 
 ## Example .env File
@@ -56,23 +56,25 @@ REDIS_PASS=yourstrongpass
 
 LOG_LEVEL=INFO
 ENVIRONMENT=prod
-AUTH_REQUIRED=false
+AUTH_REQUIRED=true
 TASK_ADMIN_TOKEN=
 ```
 
 Note: Default values in .env.example are suitable for running via Docker Compose. For production, use secure passwords and adjust the configuration as needed.
 
 ## Launching
-The docker-compose.yml file defines four services:
+The docker-compose.yml file defines six services:
 
 - app: The main FastAPI application (Uvicorn on port 8000)
 - scheduler: Background task scheduler (runs periodic jobs)
-- db: MySQL 8.0 database
+- db: MySQL 8.4 database
 - redis: Redis server (cache and synchronization)
+- prometheus: Metrics scraper on port 9090
+- grafana: Metrics dashboard UI on port 3000
 
 To start all components:
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 This will:
@@ -111,13 +113,13 @@ This provides interactive documentation for exploring and testing the API.
 ## Stopping and Cleaning Up
 To stop running containers:
 ```bash
-docker-compose down
+docker compose down
 ```
 
 MySQL data is preserved in the db_data volume.
 
 To remove all data and reset the state:
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 This will delete the volume and reinitialize the DB on next startup with default reference data.

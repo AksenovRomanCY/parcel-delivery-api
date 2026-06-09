@@ -84,12 +84,12 @@ class Settings(BaseSettings):
         return f"redis://:{self.REDIS_PASS}@{self.REDIS_HOST}:{self.REDIS_PORT}/1"
 
     # Authentication mode:
-    # - AUTH_REQUIRED=false keeps the legacy anonymous X-Session-Id flow.
     # - AUTH_REQUIRED=true requires Bearer JWT and stores parcel ownership in user_id.
+    # - AUTH_REQUIRED=false keeps the deprecated anonymous X-Session-Id flow.
     JWT_SECRET_KEY: str = "change-me-in-production-use-32-bytes-minimum"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MIN: int = 30
-    AUTH_REQUIRED: bool = False
+    AUTH_REQUIRED: bool = True
 
     # Operational shared-secret for admin-only endpoints such as manual task
     # triggers. Empty string means those endpoints are disabled by default.

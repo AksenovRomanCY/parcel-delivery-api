@@ -6,20 +6,20 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-SESSION_HEADER = "X-Session-Id"
 ParcelPayloadFactory = Callable[..., dict[str, object]]
+AuthContext = tuple[dict[str, str], str]
 
 
 async def test_create_parcel(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_type_id: str,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
-    """Parcel creation should return an ID and the effective owner ID."""
+    """Parcel creation should return an ID and the JWT user owner ID."""
     # Arrange
     payload = parcel_payload_factory(parcel_type_id)
-    headers = {SESSION_HEADER: session_id}
+    headers, user_id = auth_context
 
     # Act
     resp = await client.post("/parcels", json=payload, headers=headers)
@@ -28,13 +28,32 @@ async def test_create_parcel(
     assert resp.status_code == 201
     data = resp.json()
     assert "id" in data
-    assert data["owner_id"] == session_id
+    assert data["owner_id"] == user_id
 
 
-async def test_create_parcel_empty_body(client: AsyncClient, session_id: str) -> None:
+async def test_create_parcel_requires_bearer_token(
+    client: AsyncClient,
+    parcel_type_id: str,
+    parcel_payload_factory: ParcelPayloadFactory,
+) -> None:
+    """Parcel creation should require JWT authentication by default."""
+    # Arrange
+    payload = parcel_payload_factory(parcel_type_id)
+
+    # Act
+    resp = await client.post("/parcels", json=payload)
+
+    # Assert
+    assert resp.status_code == 401
+
+
+async def test_create_parcel_empty_body(
+    client: AsyncClient,
+    auth_context: AuthContext,
+) -> None:
     """Parcel creation should validate required body fields."""
     # Arrange
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
 
     # Act
     resp = await client.post("/parcels", json={}, headers=headers)
@@ -45,13 +64,13 @@ async def test_create_parcel_empty_body(client: AsyncClient, session_id: str) ->
 
 async def test_create_parcel_invalid_type(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
     """Parcel creation should reject unknown parcel types."""
     # Arrange
     payload = parcel_payload_factory(str(uuid4()))
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
 
     # Act
     resp = await client.post("/parcels", json=payload, headers=headers)
@@ -65,14 +84,14 @@ async def test_create_parcel_invalid_type(
 
 async def test_create_parcel_negative_weight(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_type_id: str,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
     """Parcel creation should reject negative weight."""
     # Arrange
     payload = parcel_payload_factory(parcel_type_id, weight_kg="-1")
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
 
     # Act
     resp = await client.post("/parcels", json=payload, headers=headers)
@@ -83,13 +102,13 @@ async def test_create_parcel_negative_weight(
 
 async def test_list_own_parcels(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_type_id: str,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
-    """Parcel list should return parcels owned by the active session."""
+    """Parcel list should return parcels owned by the authenticated user."""
     # Arrange
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
     create_resp = await client.post(
         "/parcels",
         json=parcel_payload_factory(parcel_type_id),
@@ -110,13 +129,13 @@ async def test_list_own_parcels(
 
 async def test_list_parcels_pagination(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_type_id: str,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
     """Parcel list should honor limit and offset."""
     # Arrange
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
     for index in range(2):
         resp = await client.post(
             "/parcels",
@@ -143,12 +162,12 @@ async def test_list_parcels_pagination(
 @pytest.mark.parametrize("query", ["limit=0", "limit=101", "offset=-1"])
 async def test_list_parcels_rejects_invalid_pagination(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     query: str,
 ) -> None:
     """Parcel list should reject invalid pagination boundaries."""
     # Arrange
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
 
     # Act
     resp = await client.get(f"/parcels?{query}", headers=headers)
@@ -159,13 +178,13 @@ async def test_list_parcels_rejects_invalid_pagination(
 
 async def test_get_parcel_by_id(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_type_id: str,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
     """Parcel detail should return an owned parcel by ID."""
     # Arrange
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
     create_resp = await client.post(
         "/parcels",
         json=parcel_payload_factory(parcel_type_id, name="Specific Parcel"),
@@ -183,21 +202,30 @@ async def test_get_parcel_by_id(
     assert data["name"] == "Specific Parcel"
 
 
-async def test_get_parcel_forbidden_other_session(
+async def test_get_parcel_forbidden_other_user(
     client: AsyncClient,
-    session_id: str,
+    auth_context: AuthContext,
     parcel_type_id: str,
     parcel_payload_factory: ParcelPayloadFactory,
 ) -> None:
-    """Parcel detail should reject access from another session."""
+    """Parcel detail should reject access from another authenticated user."""
     # Arrange
+    headers, _user_id = auth_context
     create_resp = await client.post(
         "/parcels",
         json=parcel_payload_factory(parcel_type_id),
-        headers={SESSION_HEADER: session_id},
+        headers=headers,
     )
     parcel_id = create_resp.json()["id"]
-    other_headers = {SESSION_HEADER: str(uuid4())}
+    other_email = f"other-{uuid4()}@example.com"
+    other_login = await client.post(
+        "/auth/register",
+        json={"email": other_email, "password": "securepass123"},
+    )
+    assert other_login.status_code == 201
+    other_headers = {
+        "Authorization": f"Bearer {other_login.json()['access_token']}",
+    }
 
     # Act
     get_resp = await client.get(f"/parcels/{parcel_id}", headers=other_headers)
@@ -207,10 +235,13 @@ async def test_get_parcel_forbidden_other_session(
     assert get_resp.json()["detail"] == "Forbidden"
 
 
-async def test_get_parcel_not_found(client: AsyncClient, session_id: str) -> None:
+async def test_get_parcel_not_found(
+    client: AsyncClient,
+    auth_context: AuthContext,
+) -> None:
     """Parcel detail should return 404 for a missing parcel."""
     # Arrange
-    headers = {SESSION_HEADER: session_id}
+    headers, _user_id = auth_context
     parcel_id = str(uuid4())
 
     # Act

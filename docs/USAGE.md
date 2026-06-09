@@ -16,7 +16,7 @@ This section describes how to work with the Parcel Delivery API: key endpoints, 
 * `POST /auth/login` – Authenticate and receive a JWT access token.
 * `GET /parcel-types` – Retrieve all available parcel types.
 * `POST /parcels` – Register a new parcel with specified attributes.
-* `GET /parcels` – List all parcels owned by the current session/user (with filtering & pagination).
+* `GET /parcels` – List all parcels owned by the authenticated user (with filtering & pagination).
 * `GET /parcels/{id}` – Get detailed information about a specific parcel (if owned by the caller).
 * `POST /tasks/recalc-delivery` – Manually trigger background recalculation of delivery costs (for debugging/admin).
 
@@ -24,16 +24,15 @@ This section describes how to work with the Parcel Delivery API: key endpoints, 
 
 ## Caller Identification
 
-The service has two modes controlled by `AUTH_REQUIRED`.
+The service uses JWT Bearer authentication by default (`AUTH_REQUIRED=true`).
 
-In the default legacy mode (`AUTH_REQUIRED=false`), each parcel is tied to an
-anonymous session identified by the `X-Session-Id` header. If the header is not
-provided, the API generates a new UUID and returns it in the response header.
-Clients must retain and reuse this session ID in subsequent requests.
+Clients call `/auth/register` or `/auth/login`, then send
+`Authorization: Bearer <token>` for parcel endpoints. Parcel ownership is based
+on the JWT subject.
 
-When `AUTH_REQUIRED=true`, clients call `/auth/register` or `/auth/login`, then
-send `Authorization: Bearer <token>` for parcel endpoints. In this mode parcel
-ownership is based on the JWT subject rather than `X-Session-Id`.
+The legacy anonymous `X-Session-Id` flow is still available only when
+`AUTH_REQUIRED=false`. That mode is deprecated and responses include
+`Deprecation` and `Sunset` headers.
 
 ---
 
@@ -111,6 +110,8 @@ Host: localhost:8000
 
 Registers a new parcel.
 
+Requires `Authorization: Bearer <token>`.
+
 ### Request Body:
 
 ```json
@@ -136,14 +137,14 @@ Registers a new parcel.
 }
 ```
 
-> `owner_id` is the session ID in legacy mode and the user ID in JWT mode.
+> `owner_id` is the user ID in the default JWT mode.
 > Delivery cost is calculated asynchronously (initially `null`).
 
 ---
 
 ## GET /parcels
 
-Returns all parcels for the current session/user.
+Returns all parcels for the authenticated user.
 
 ### Query Parameters:
 
@@ -156,7 +157,7 @@ Returns all parcels for the current session/user.
 
 ```http
 GET /parcels?limit=10&offset=0&has_cost=false HTTP/1.1
-X-Session-Id: ...
+Authorization: Bearer ...
 ```
 
 ### Example Response:
@@ -194,7 +195,7 @@ Returns a single parcel by ID if it belongs to the current session/user.
 
 ```http
 GET /parcels/{id} HTTP/1.1
-X-Session-Id: ...
+Authorization: Bearer ...
 ```
 
 ### Example Response:

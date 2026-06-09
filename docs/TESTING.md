@@ -36,8 +36,9 @@ real MySQL and Redis services through the test fixtures.
 Integration tests must run against a dedicated test database named
 `delivery_test`. Do not run integration tests against the application database
 `delivery`, because the fixtures clean mutable tables before each test.
-Use `.env.test` for local test infrastructure; `.env` remains the application
-and Docker runtime configuration.
+Use `.env.test` for local test infrastructure; it keeps legacy auth explicit for
+compatibility checks while the main application defaults to JWT auth. `.env`
+remains the application and Docker runtime configuration.
 
 ## Unit Tests
 
