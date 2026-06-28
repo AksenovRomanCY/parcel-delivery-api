@@ -27,13 +27,52 @@ app/
 ├── api/               # FastAPI routers (auth, health, parcels, parcel_types, tasks)
 ├── core/              # Settings, logging, cache, security, metrics, Sentry
 ├── db/                # DB engine/session and FastAPI dependencies
-├── models/            # ORM models (Parcel, ParcelType, User)
+├── models/            # ORM models (Parcel, ParcelType, User, RefreshToken)
 ├── schemas/           # Pydantic schemas for requests/responses
 ├── services/          # Business logic (ParcelService, RateService, etc.)
 ├── tasks/             # Background jobs and scheduler setup
 ├── middlewares/       # Middleware (e.g., session ID management)
 ├── main.py            # FastAPI app entry point
 ├── scheduler_main.py  # APScheduler launch point
+```
+
+## Component Diagram
+
+```text
+Client
+  |
+  | HTTP/JSON
+  v
+FastAPI app
+  |
+  +-- api/ routers
+  |     |
+  |     +-- deps.py resolves JWT user_id or legacy session_id
+  |     +-- errors.py normalizes JSON error responses
+  |
+  +-- schemas/ validates input and formats camelCase output
+  |
+  +-- services/ applies business rules
+  |     |
+  |     +-- AuthService issues access tokens and refresh cookies
+  |     +-- ParcelService owns parcel CRUD rules
+  |     +-- RateService fetches and caches USD/RUB rates
+  |
+  +-- db/ SQLAlchemy AsyncIO sessions
+  |     |
+  |     v
+  |   MySQL
+  |
+  +-- core/cache.py and core/rate_limit.py
+        |
+        v
+      Redis
+
+Scheduler process
+  |
+  +-- APScheduler interval job
+  +-- Redis lock and rate cache
+  +-- MySQL parcel updates
 ```
 
 ## API Layer
@@ -52,13 +91,54 @@ Response format is standardized using FastAPI’s `response_model`. Error handle
 
 ## Database (MySQL + SQLAlchemy)
 
-* Tables: `parcel_type`, `parcel`, `user`
+* Tables: `parcel_type`, `parcel`, `user`, `refresh_token`
 * `Parcel` includes: `id`, `name`, `weight_kg`, `declared_value_usd`, `delivery_cost_rub`, `session_id`, `user_id`, `parcel_type_id`
+* `User` stores registered credentials and role for JWT mode
+* `RefreshToken` stores hashed refresh tokens, token families, expiry, revocation, and rotation metadata
 * Monetary and weight values use `Numeric`/`Decimal`, not floats
 * DB CHECK constraints enforce positive weight and non-negative money fields
 * ORM via `SQLAlchemy AsyncIO`
 * DB session managed via FastAPI `Depends`
 * Alembic used for schema migrations
+
+## Data Model Sketch
+
+```text
+user
+  id PK
+  email UNIQUE
+  hashed_password
+  role
+  created_at
+    |
+    | 1..many
+    v
+refresh_token
+  jti PK
+  user_id FK -> user.id
+  token_hash UNIQUE
+  family_id
+  expires_at
+  revoked_at
+  replaced_by_jti
+  created_at
+
+parcel_type
+  id PK
+  name UNIQUE
+    |
+    | 1..many
+    v
+parcel
+  id PK
+  name
+  weight_kg
+  declared_value_usd
+  delivery_cost_rub NULL while pending
+  parcel_type_id FK -> parcel_type.id
+  user_id FK -> user.id NULL in legacy mode
+  session_id used only when AUTH_REQUIRED=false
+```
 
 ## Services Layer
 
@@ -88,6 +168,49 @@ Operational endpoints such as `POST /tasks/recalc-delivery` are not tied to a
 user. They require the shared `X-Admin-Token` header and are disabled when
 `TASK_ADMIN_TOKEN` is empty.
 
+## Request Flow
+
+Default JWT parcel flow:
+
+```text
+Client
+  |
+  | POST /auth/register or /auth/login
+  v
+Auth router -> AuthService -> MySQL user/refresh_token
+  |
+  | access token JSON + refresh/CSRF cookies
+  v
+Client
+  |
+  | Authorization: Bearer <access_token>
+  | POST /parcels
+  v
+Parcel router -> get_parcel_writer_owner_id -> decode_token()
+  |
+  v
+ParcelService validates parcel_type and writes parcel.user_id
+  |
+  v
+MySQL commit -> 201 { id, owner_id }
+```
+
+Deprecated legacy parcel flow:
+
+```text
+Client
+  |
+  | request without Bearer token, only when AUTH_REQUIRED=false
+  v
+Session middleware accepts or creates X-Session-Id
+  |
+  v
+Parcel router -> get_session_id()
+  |
+  v
+ParcelService writes parcel.session_id
+```
+
 ## Redis Caching
 
 * Decorator `@redis_cache(prefix, ttl, key_func)` applies to API functions
@@ -111,6 +234,30 @@ user. They require the shared `X-Admin-Token` header and are disabled when
 * Runs every `DELIVERY_JOB_INTERVAL_MIN` minutes via `APScheduler`
 * Manual trigger via `POST /tasks/recalc-delivery` with `X-Admin-Token`
 * Writes `delivery_last_run_updated` and `delivery_last_run_at` metadata to Redis
+
+## Delivery Cost Flow
+
+```text
+Scheduler tick or admin trigger
+  |
+  v
+recalc_delivery_costs()
+  |
+  +-- acquire Redis NX lock: delivery_job_lock
+  |
+  +-- load pending parcels from MySQL where delivery_cost_rub IS NULL
+  |
+  +-- RateService.get_usd_rub_rate()
+  |     |
+  |     +-- read cached rate from Redis, or
+  |     +-- fetch Central Bank API with retry and cache result
+  |
+  +-- calculate RUB cost for each parcel
+  |
+  +-- commit updates to MySQL
+  |
+  +-- write last-run metadata to Redis and release lock
+```
 
 ## Asynchronous Flow
 
