@@ -5,7 +5,7 @@
 ## Core Functionality
 
 - **Parcel Registration**: An authenticated caller can register a parcel by providing a name, weight, declared value in USD, and parcel type. The service assigns a unique ID and asynchronously calculates the delivery cost in RUB.
-- **Retrieving Parcel Types**: A reference list of parcel types (e.g., clothing, electronics, other) is available via the API, intended for UI dropdowns and filters.
+- **Retrieving Parcel Types**: A reference list of parcel types (e.g., clothes, electronics, misc) is available via the API, intended for UI dropdowns and filters.
 - **List of Parcels**: Users can fetch their own parcels, with filtering by type and presence of delivery cost, along with pagination.
 - **Parcel Details**: Each registered parcel includes detailed information, including the calculated delivery cost once it becomes available.
 - **Background Tasks**: The service periodically recalculates delivery costs for new parcels and caches the current USD/RUB exchange rate. A manual endpoint is available for operators when `TASK_ADMIN_TOKEN` is configured.
@@ -38,7 +38,6 @@ Full documentation is located in the `docs/` directory. Key sections include:
 - **[API Usage](docs/USAGE.md)**: – overview of REST API (endpoints, example requests, Swagger UI).
 - **[Testing](docs/TESTING.md)**: – how to run tests, test infrastructure overview, and coverage measurement.
 - **[Architecture](docs/ARCHITECTURE.md)**: – internal design of the microservice (modules, layers, DB/cache/task scheduler interaction).
-- **[Auth Release Plan](docs/AUTH_RELEASE_PLAN.md)**: – staged auth modernization plan for `v1.2.0`, `v1.3.0`, and `v2.0.0`.
 
 ## Quick Start
 
@@ -63,7 +62,7 @@ See docs/INSTALLATION.md for all options.
 ### 3. Launch the service with Docker Compose
 
 ```bash
-docker compose up --build
+make up
 ```
 
 This will:
@@ -94,4 +93,31 @@ Expected response:
 
 ```json
 {"status": "ok"}
+```
+
+## Try It Quickly
+
+For a fast end-to-end check after configuring `.env`:
+
+```bash
+cp .env.example .env
+# Replace JWT_SECRET_KEY in .env with a private 32+ character value.
+make up
+make smoke
+make down
+```
+
+`make smoke` runs a real API flow against the running service: health,
+OpenAPI, register/login/refresh/logout, parcel types, parcel creation, list,
+detail, validation errors, disabled admin task, and metrics.
+
+Useful local commands:
+
+```bash
+make help
+make lint
+make test-unit
+make test-infra
+make test-integration
+make coverage
 ```

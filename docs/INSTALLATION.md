@@ -88,6 +88,12 @@ The docker-compose.yml file defines six services:
 
 To start all components:
 ```bash
+make up
+```
+
+Equivalent raw Docker Compose command:
+
+```bash
 docker compose up -d --build
 ```
 
@@ -96,7 +102,7 @@ This will:
 - Start all containers in detached mode
 - Wait for MySQL readiness (via healthcheck)
 - Automatically apply Alembic migrations on first start:
-  - Creates tables parcel_type and parcel
+  - Creates tables `parcel_type`, `parcel`, `user`, and `refresh_token`
   - Loads initial parcel types: clothes, electronics, misc
 
 ## Post-Launch
@@ -127,10 +133,22 @@ This provides interactive documentation for exploring and testing the API.
 ## Stopping and Cleaning Up
 To stop running containers:
 ```bash
+make down
+```
+
+Equivalent raw Docker Compose command:
+
+```bash
 docker compose down
 ```
 
 MySQL data is preserved in the db_data volume.
+
+To follow application logs:
+
+```bash
+make logs
+```
 
 To remove all data and reset the state:
 ```bash

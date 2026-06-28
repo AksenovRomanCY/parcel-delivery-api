@@ -46,6 +46,51 @@ The legacy anonymous `X-Session-Id` flow is still available only when
 
 ---
 
+## Demo curl Flow
+
+With the API running at `http://localhost:8000`, this flow registers a user,
+extracts the access token, finds the `electronics` parcel type, creates a
+parcel, then reads the list and detail endpoints.
+
+```bash
+BASE_URL=http://localhost:8000
+EMAIL="demo-$(date +%s)@example.com"
+PASSWORD=securepass123
+
+TOKEN="$(
+  curl -sS -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" \
+    "$BASE_URL/auth/register" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])'
+)"
+
+TYPE_ID="$(
+  curl -sS "$BASE_URL/parcel-types?limit=20&offset=0" \
+  | python3 -c 'import json,sys
+data=json.load(sys.stdin)
+print(next(item["id"] for item in data["items"] if item["name"]=="electronics"))'
+)"
+
+PARCEL_ID="$(
+  curl -sS -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"name\":\"Demo parcel\",\"weightKg\":\"1.200\",\"declaredValueUsd\":\"129.99\",\"parcelTypeId\":\"$TYPE_ID\"}" \
+    "$BASE_URL/parcels" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])'
+)"
+
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/parcels?limit=10&offset=0"
+
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/parcels/$PARCEL_ID"
+```
+
+For an automated version of the same idea, run `make smoke` after the Docker
+Compose stack is up.
+
+---
+
 ## Request and Response Format
 
 The API uses **JSON** for both requests and responses. All responses follow a standard structure:
