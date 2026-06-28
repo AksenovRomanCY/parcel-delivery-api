@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help install up down logs test-unit test-infra test-integration coverage lint docker-build ci-local smoke
+.PHONY: help install up down logs test-unit test-infra test-db test-integration coverage lint docker-build ci-local smoke
 
 help: ## Show available commands.
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-18s %s\n", $$1, $$2}'
@@ -22,6 +22,16 @@ test-unit: ## Run unit tests.
 
 test-infra: ## Start MySQL and Redis for integration tests.
 	COMPOSE_ENV_FILE=.env.test docker compose --env-file .env.test up -d db redis
+
+test-db: test-infra ## Ensure the integration test database exists.
+	set -a; source .env.test; set +a; \
+	until COMPOSE_ENV_FILE=.env.test docker compose --env-file .env.test exec -T db \
+	  mysqladmin ping -h127.0.0.1 -u"$${DB_USER}" -p"$${DB_PASSWORD}" --silent; do \
+	  sleep 1; \
+	done; \
+	COMPOSE_ENV_FILE=.env.test docker compose --env-file .env.test exec -T db \
+	  mysql -h127.0.0.1 -u"$${DB_USER}" -p"$${DB_PASSWORD}" \
+	  -e "CREATE DATABASE IF NOT EXISTS \`$${DB_NAME}\`"
 
 test-integration: ## Run integration tests against local MySQL and Redis.
 	set -a; source .env.test; set +a; \
@@ -45,11 +55,10 @@ lint: ## Run format, lint, type, and security checks.
 docker-build: ## Build the application Docker image.
 	docker build -t parcel-delivery-api:local-check .
 
-ci-local: lint test-infra ## Run the local equivalent of CI checks.
+ci-local: lint test-db ## Run the local equivalent of CI checks.
 	set -a; source .env.test; set +a; poetry run alembic upgrade head
 	$(MAKE) coverage
 	$(MAKE) docker-build
 
 smoke: ## Run end-to-end smoke checks against a running app.
 	scripts/smoke_test.sh
-
