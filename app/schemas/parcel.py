@@ -35,6 +35,14 @@ class ParcelBase(BaseModel):
     model_config = {
         "alias_generator": to_camel,
         "populate_by_name": True,
+        "json_schema_extra": {
+            "example": {
+                "name": "Apple iPhone 15 Pro",
+                "weightKg": "1.200",
+                "declaredValueUsd": "1299.99",
+                "parcelTypeId": "a3a814f4-4724-4947-b6ab-8337f3b33969",
+            }
+        },
     }
 
 
@@ -54,6 +62,15 @@ class ParcelCreateResponse(BaseModel):
     id: str
     owner_id: str
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": "99e93aee-776d-4bc5-8157-ab80a12b6556",
+                "owner_id": "c83e529a-9fa9-4445-a2f5-508e2f10e3de",
+            }
+        }
+    }
+
 
 class ParcelRead(BaseModel):
     """Response schema when returning a single parcel or a list item."""
@@ -71,6 +88,19 @@ class ParcelRead(BaseModel):
         "alias_generator": to_camel,
         "populate_by_name": True,
         "from_attributes": True,
+        "json_schema_extra": {
+            "example": {
+                "id": "99e93aee-776d-4bc5-8157-ab80a12b6556",
+                "name": "Apple iPhone 15 Pro",
+                "weightKg": "1.200",
+                "declaredValueUsd": "1299.99",
+                "deliveryCostRub": None,
+                "parcelType": {
+                    "id": "a3a814f4-4724-4947-b6ab-8337f3b33969",
+                    "name": "electronics",
+                },
+            }
+        },
     }
 
 

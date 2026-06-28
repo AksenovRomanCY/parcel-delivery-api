@@ -25,6 +25,24 @@ class ErrorResponse(BaseModel):
     message: str = Field(..., examples=["Payload validation failed"])
     details: Sequence[dict[str, Any]] | None = None
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "code": "validation_error",
+                "message": "Payload validation failed",
+                "details": [
+                    {
+                        "type": "greater_than",
+                        "loc": ["body", "weightKg"],
+                        "msg": "Input should be greater than 0",
+                        "input": "-1",
+                        "ctx": {"gt": 0},
+                    }
+                ],
+            }
+        }
+    }
+
 
 class PaginationParams(BaseModel):
     """Query string parameters for paginating list endpoints.
@@ -39,6 +57,15 @@ class PaginationParams(BaseModel):
 
     limit: int = Field(20, ge=1, le=100, description="Number of entries per page")
     offset: int = Field(0, ge=0, description="Offset (how many records to skip)")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "limit": 20,
+                "offset": 0,
+            }
+        }
+    }
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -57,3 +84,14 @@ class PaginatedResponse(BaseModel, Generic[T]):
     total: int
     limit: int
     offset: int
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "items": [],
+                "total": 0,
+                "limit": 20,
+                "offset": 0,
+            }
+        }
+    }

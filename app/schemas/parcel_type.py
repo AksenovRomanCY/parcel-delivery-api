@@ -25,4 +25,10 @@ class ParcelTypeRead(BaseModel):
         "alias_generator": to_camel,
         "populate_by_name": True,
         "from_attributes": True,
+        "json_schema_extra": {
+            "example": {
+                "id": "a3a814f4-4724-4947-b6ab-8337f3b33969",
+                "name": "electronics",
+            }
+        },
     }
