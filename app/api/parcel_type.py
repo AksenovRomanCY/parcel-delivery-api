@@ -8,11 +8,17 @@ The router contains read-only operations for the reference table
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.examples import PARCEL_TYPE_LIST_EXAMPLE, VALIDATION_ERROR_EXAMPLE
 from app.core.cache import make_cache_key_no_session, redis_cache
 from app.core.rate_limit import limiter
 from app.core.settings import settings
 from app.db.deps import get_db
-from app.schemas import PaginatedResponse, PaginationParams, ParcelTypeRead
+from app.schemas import (
+    ErrorResponse,
+    PaginatedResponse,
+    PaginationParams,
+    ParcelTypeRead,
+)
 from app.services import ParcelTypeService
 
 router = APIRouter(prefix="/parcel-types", tags=["parcel-types"])
@@ -22,6 +28,17 @@ router = APIRouter(prefix="/parcel-types", tags=["parcel-types"])
     "",
     response_model=PaginatedResponse[ParcelTypeRead],
     status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "Paginated reference parcel types.",
+            "content": {"application/json": {"example": PARCEL_TYPE_LIST_EXAMPLE}},
+        },
+        422: {
+            "model": ErrorResponse,
+            "description": "Invalid pagination query.",
+            "content": {"application/json": {"example": VALIDATION_ERROR_EXAMPLE}},
+        },
+    },
 )
 @limiter.limit(settings.RATE_LIMIT_PARCEL_TYPES)
 @redis_cache(

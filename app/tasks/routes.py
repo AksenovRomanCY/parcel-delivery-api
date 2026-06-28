@@ -9,9 +9,11 @@ import logging
 from fastapi import APIRouter, Depends, Request, status
 
 from app.api.deps import require_task_admin_token
+from app.api.examples import FORBIDDEN_ERROR_EXAMPLE, TASK_RECALC_RESPONSE_EXAMPLE
 from app.core.rate_limit import limiter
 from app.core.settings import settings
 from app.redis_client import get_redis
+from app.schemas import ErrorResponse
 from app.tasks.delivery import recalc_delivery_costs
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -24,6 +26,17 @@ log = logging.getLogger(__name__)
     status_code=status.HTTP_202_ACCEPTED,
     summary="Trigger delivery-cost recalculation manually",
     response_model=dict[str, int],
+    responses={
+        202: {
+            "description": "Delivery-cost recalculation completed.",
+            "content": {"application/json": {"example": TASK_RECALC_RESPONSE_EXAMPLE}},
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Manual trigger is disabled or admin token is invalid.",
+            "content": {"application/json": {"example": FORBIDDEN_ERROR_EXAMPLE}},
+        },
+    },
 )
 @limiter.limit(settings.RATE_LIMIT_RECALC)
 async def manual_recalc(

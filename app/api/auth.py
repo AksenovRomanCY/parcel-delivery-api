@@ -7,10 +7,17 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id
+from app.api.examples import (
+    FORBIDDEN_ERROR_EXAMPLE,
+    TOKEN_RESPONSE_EXAMPLE,
+    UNAUTHORIZED_ERROR_EXAMPLE,
+    VALIDATION_ERROR_EXAMPLE,
+)
 from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.rate_limit import limiter
 from app.core.settings import settings
 from app.db.deps import get_db
+from app.schemas import ErrorResponse
 from app.schemas.auth import TokenResponse, UserLogin, UserRegister
 from app.services.auth import AuthResult, AuthService
 
@@ -75,7 +82,35 @@ def _require_csrf(request: Request) -> None:
         raise ForbiddenError("Invalid CSRF token")
 
 
-@router.post("/register", status_code=201, response_model=TokenResponse)
+@router.post(
+    "/register",
+    status_code=201,
+    response_model=TokenResponse,
+    responses={
+        201: {
+            "description": "User registered and access token issued.",
+            "content": {"application/json": {"example": TOKEN_RESPONSE_EXAMPLE}},
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Email is already registered.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": "business_error",
+                        "message": "Email already registered",
+                        "details": None,
+                    }
+                }
+            },
+        },
+        422: {
+            "model": ErrorResponse,
+            "description": "Invalid registration payload.",
+            "content": {"application/json": {"example": VALIDATION_ERROR_EXAMPLE}},
+        },
+    },
+)
 @limiter.limit("10/minute")
 async def register(
     request: Request,
@@ -89,7 +124,26 @@ async def register(
     return TokenResponse(access_token=result.access_token)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses={
+        200: {
+            "description": "User authenticated and access token issued.",
+            "content": {"application/json": {"example": TOKEN_RESPONSE_EXAMPLE}},
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Invalid email or password.",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}},
+        },
+        422: {
+            "model": ErrorResponse,
+            "description": "Invalid login payload.",
+            "content": {"application/json": {"example": VALIDATION_ERROR_EXAMPLE}},
+        },
+    },
+)
 @limiter.limit("20/minute")
 async def login(
     request: Request,
@@ -103,7 +157,26 @@ async def login(
     return TokenResponse(access_token=result.access_token)
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    responses={
+        200: {
+            "description": "Refresh token rotated and access token issued.",
+            "content": {"application/json": {"example": TOKEN_RESPONSE_EXAMPLE}},
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing, expired, or revoked refresh token.",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}},
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid CSRF token.",
+            "content": {"application/json": {"example": FORBIDDEN_ERROR_EXAMPLE}},
+        },
+    },
+)
 @limiter.limit("20/minute")
 async def refresh(
     request: Request,
@@ -117,7 +190,22 @@ async def refresh(
     return TokenResponse(access_token=result.access_token)
 
 
-@router.post("/logout", status_code=204)
+@router.post(
+    "/logout",
+    status_code=204,
+    responses={
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing refresh token.",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}},
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid CSRF token.",
+            "content": {"application/json": {"example": FORBIDDEN_ERROR_EXAMPLE}},
+        },
+    },
+)
 @limiter.limit("20/minute")
 async def logout(
     request: Request,
@@ -132,7 +220,17 @@ async def logout(
     return response
 
 
-@router.post("/logout-all", status_code=204)
+@router.post(
+    "/logout-all",
+    status_code=204,
+    responses={
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid access token.",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}},
+        },
+    },
+)
 @limiter.limit("10/minute")
 async def logout_all(
     request: Request,

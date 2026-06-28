@@ -11,6 +11,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_parcel_reader_owner_id, get_parcel_writer_owner_id
+from app.api.examples import (
+    BUSINESS_ERROR_EXAMPLE,
+    PARCEL_CREATE_RESPONSE_EXAMPLE,
+    PARCEL_DETAIL_EXAMPLE,
+    PARCEL_FORBIDDEN_EXAMPLE,
+    PARCEL_LIST_EXAMPLE,
+    UNAUTHORIZED_ERROR_EXAMPLE,
+    VALIDATION_ERROR_EXAMPLE,
+)
 from app.core.cache import redis_cache
 from app.core.exceptions import NotFoundError, UnauthorizedError
 from app.core.rate_limit import limiter
@@ -18,6 +27,7 @@ from app.core.settings import settings
 from app.db.deps import get_db
 from app.models.parcel import Parcel
 from app.schemas import (
+    ErrorResponse,
     PaginatedResponse,
     PaginationParams,
     ParcelCreate,
@@ -38,6 +48,29 @@ log = logging.getLogger(__name__)
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=ParcelCreateResponse,
+    responses={
+        201: {
+            "description": "Parcel registered for the authenticated caller.",
+            "content": {
+                "application/json": {"example": PARCEL_CREATE_RESPONSE_EXAMPLE}
+            },
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "Unknown parcel type or business-rule violation.",
+            "content": {"application/json": {"example": BUSINESS_ERROR_EXAMPLE}},
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid access token.",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}},
+        },
+        422: {
+            "model": ErrorResponse,
+            "description": "Invalid parcel payload.",
+            "content": {"application/json": {"example": VALIDATION_ERROR_EXAMPLE}},
+        },
+    },
 )
 @limiter.limit(settings.RATE_LIMIT_CREATE)
 async def register_parcel(
@@ -62,6 +95,22 @@ async def register_parcel(
     "",
     response_model=PaginatedResponse[ParcelRead],
     status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "Paginated parcels owned by the current caller.",
+            "content": {"application/json": {"example": PARCEL_LIST_EXAMPLE}},
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid access token.",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}},
+        },
+        422: {
+            "model": ErrorResponse,
+            "description": "Invalid pagination or filter query.",
+            "content": {"application/json": {"example": VALIDATION_ERROR_EXAMPLE}},
+        },
+    },
 )
 @limiter.limit(settings.RATE_LIMIT_LIST)
 @redis_cache("parcels", ttl=settings.CACHE_TTL_DEFAULT)
@@ -96,6 +145,25 @@ async def list_parcels(
     "/{parcel_id}",
     response_model=ParcelRead,
     status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "Parcel details for an owned parcel.",
+            "content": {"application/json": {"example": PARCEL_DETAIL_EXAMPLE}},
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid access token.",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}},
+        },
+        403: {
+            "description": "The parcel exists but belongs to another caller.",
+            "content": {"application/json": {"example": PARCEL_FORBIDDEN_EXAMPLE}},
+        },
+        404: {
+            "description": "Parcel not found.",
+            "content": {"application/json": {"example": {"detail": "Not found"}}},
+        },
+    },
 )
 @limiter.limit(settings.RATE_LIMIT_DETAIL)
 @redis_cache("parcel", ttl=settings.CACHE_TTL_DEFAULT)
